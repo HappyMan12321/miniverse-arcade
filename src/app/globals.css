@@ -656,7 +656,7 @@ select {
   fill: var(--green);
 }
 .player {
-  animation: player-step 80ms linear;
+  will-change: transform;
 }
 .player-dot {
   fill: var(--accent);
@@ -1129,14 +1129,6 @@ select {
   }
   to {
     opacity: 1;
-  }
-}
-@keyframes player-step {
-  from {
-    transform: var(--player-from);
-  }
-  to {
-    transform: var(--player-to);
   }
 }
 @keyframes tile-appear {
@@ -1656,5 +1648,152 @@ select {
   }
   .dpad-circle kbd {
     display: none;
+  }
+}
+
+.maze-bottom {
+  justify-content: space-between;
+  min-height: 44px;
+  margin-top: 4px;
+  gap: 8px;
+}
+.maze-legend {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.maze-legend > span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.maze-input-modes {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px;
+  border-radius: 8px;
+  background: var(--panel);
+}
+.maze-input-modes button {
+  min-height: 44px;
+  padding: 0 9px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+.maze-input-modes button[aria-pressed="true"] {
+  background: var(--surface);
+  border-color: var(--border);
+  color: var(--accent);
+}
+.joystick-section {
+  padding: 2px 0;
+}
+.maze-joystick {
+  position: relative;
+  display: block;
+  flex-shrink: 0;
+  width: 136px;
+  height: 136px;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  background: radial-gradient(
+    circle,
+    var(--surface) 0 35%,
+    var(--panel) 36% 100%
+  );
+  padding: 0;
+  overflow: visible;
+}
+.maze-joystick[aria-disabled="true"] {
+  opacity: 0.4;
+  cursor: default;
+}
+.joystick-crosshair {
+  position: absolute;
+  inset: 12px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  pointer-events: none;
+}
+.joystick-crosshair::before,
+.joystick-crosshair::after {
+  content: "";
+  position: absolute;
+  background: var(--border);
+}
+.joystick-crosshair::before {
+  left: 50%;
+  top: 0;
+  width: 1px;
+  height: 100%;
+}
+.joystick-crosshair::after {
+  top: 50%;
+  left: 0;
+  height: 1px;
+  width: 100%;
+}
+.joystick-mark {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  margin-left: -3px;
+  margin-top: -3px;
+  background: var(--muted);
+  opacity: 0.3;
+  border-radius: 50%;
+  pointer-events: none;
+}
+.joystick-mark.is-open {
+  background: var(--accent);
+  opacity: 1;
+}
+.joystick-thumb {
+  position: absolute;
+  left: calc(50% - 24px);
+  top: calc(50% - 24px);
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-bottom-width: 3px;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: 0 3px 8px #00000012;
+  pointer-events: none;
+  transition: transform 0.1s ease-out;
+  will-change: transform;
+}
+.joystick-thumb > span {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--accent);
+  border-radius: 50%;
+}
+.is-dragging .joystick-thumb {
+  transition: none;
+  border-color: var(--accent);
+}
+@media (max-width: 700px) and (max-height: 780px) {
+  .input-buttons .maze-canvas {
+    width: min(100%, max(260px, calc(100svh - 450px)));
+  }
+  .input-joystick .maze-canvas {
+    width: min(100%, max(260px, calc(100svh - 480px)));
+  }
+}
+@media (max-width: 700px) and (max-height: 780px) {
+  .maze-joystick {
+    width: 128px;
+    height: 128px;
   }
 }

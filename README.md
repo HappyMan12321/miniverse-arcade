@@ -58,6 +58,8 @@ On-screen controls show their current mapping. Holding a pointer control repeats
 - `src/games/maze/topology.ts`: shape-specific cells and adjacency; no React dependencies.
 - `src/games/maze/engine.ts`: deterministic generation, graph validation, pathfinding, and passage-checked movement.
 - `src/games/maze/rendering.ts`: SVG wall paths from the graph, separate from generation.
+- `src/games/maze/motion.ts` and `joystick.ts`: pure linear interpolation, step pacing, dead-zone handling, and wall-safe joystick direction selection.
+- `src/games/maze/maze-joystick.tsx`: captured pointer input with mouse/touch/pen support, cancellation, and a spring-back handle.
 - `src/games/maze/maze-renderer.tsx`: memoized SVG walls, player, trail, start, and exit.
 - `src/games/maze/maze-game.tsx`: run state, input, preferences, results, and configuration.
 - `src/games/shared/clock.ts`: independently tested monotonic active-play clock, re-exported from the existing maze clock module.
@@ -73,7 +75,9 @@ Adding a game means implementing its isolated module, adding a registry entry, a
 
 Square mazes use 25/81/169/324 cells. Triangular mazes use 25/81/169/324, hexagonal mazes use 19/61/127/331, and circular mazes use 25/73/137/297. Difficulty primarily scales cell count. The exit is selected from boundary cells by maximum start distance; circular exits lie on the outer ring.
 
-Player animations restart from the preceding logical cell on rapid input, ensuring transitions stay on open cell-to-cell passages rather than cutting across corners.
+Dot movement uses frame-by-frame linear interpolation. Rapid taps are queued, held controls chain consecutive steps, and each corridor segment finishes before a turn starts. This avoids CSS animation restarts and diagonal corner cutting. Completion is recorded when the dot arrives at the exit. Reduced-motion preferences skip interpolation while retaining the same movement cadence.
+
+Select **Joystick** beneath the maze to drag a mouse, finger, or pen toward an opening. The stick follows actual on-screen neighbor directions in every geometry, with a center dead zone and slower movement near the center. It selects a geometric direction before checking walls, so a blocked direction never falls back to another opening. Release finishes the current cell and stops; blur, cancellation, hidden tabs, pause, reset, and completion clear held input. The Buttons/Joystick preference is saved locally. Keyboard controls remain available in either mode.
 
 ## Verification
 
@@ -89,7 +93,7 @@ To run the same browser checks against a deployed site, set `PLAYWRIGHT_BASE_URL
 
 Local browser tests use installed Google Chrome. CI uses bundled Chromium installed with `npx playwright install --with-deps chromium`. To use bundled Chromium locally, set `CI=1` for the browser tests after installing it.
 
-The unit suite validates 320 seeded mazes across all shape/difficulty pairs, unique identifiers, reciprocal valid neighbors and passages, spanning-tree edge count, reachability, shared polygon boundaries, available movement commands, and timer accounting. Browser tests complete every geometry, check blocked movements, restart/new-maze independence, results, settings, theme persistence, and layout overflow at 375/768/1440 pixels. Additional unit tests verify Memory Match deck composition/matching/locking, Snake collision/growth/reversal/tail behavior/full-board wins, and 2048 directional merging/spawning/score/win/loss logic. Browser tests complete Memory Match, exercise Snake with a controlled clock through eating and collision, play 2048 to a terminal board and undo, and verify the three new games on phone/tablet layouts, touch input, and dark mode. GitHub Actions runs all checks on pushes and pull requests.
+The unit suite validates 320 seeded mazes across all shape/difficulty pairs, unique identifiers, reciprocal valid neighbors and passages, spanning-tree edge count, reachability, shared polygon boundaries, available movement commands, and timer accounting. Browser tests complete every geometry, check blocked movements, restart/new-maze independence, results, settings, theme persistence, and layout overflow at 375/768/1440 pixels. Additional unit tests verify linear interpolation within connected cells, joystick direction and wall selection in all four geometries, and Memory Match deck composition/matching/locking, Snake collision/growth/reversal/tail behavior/full-board wins, and 2048 directional merging/spawning/score/win/loss logic. Browser tests complete Memory Match, exercise Snake with a controlled clock through eating and collision, play 2048 to a terminal board and undo, and verify the three new games on phone/tablet layouts, touch input, and dark mode. GitHub Actions runs all checks on pushes and pull requests.
 
 Webpack is used for builds and local development to work reliably in environments that restrict Turbopack's internal process ports.
 

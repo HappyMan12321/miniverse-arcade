@@ -1,6 +1,13 @@
 "use client";
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   ArrowRight,
   Circle,
@@ -26,8 +33,11 @@ import { generateMaze, movementTarget, solution } from "./engine";
 import { difficulties, shapes } from "./topology";
 import { MazeRenderer } from "./maze-renderer";
 import { MazeControls } from "./maze-controls";
+import { MazeJoystick } from "./maze-joystick";
+import { joystickTarget, JOYSTICK_DEAD_ZONE } from "./joystick";
+import { STEP_DURATION, joystickStepDuration, type MotionStep } from "./motion";
 import { mazeControls, directionForKey } from "./controls";
-import type { Difficulty, Direction, MazeDefinition } from "./types";
+import type { Difficulty, Direction, MazeDefinition, Point } from "./types";
 const icons = {
   square: Square,
   triangle: Triangle,
@@ -53,29 +63,173 @@ function initialRun(maze: MazeDefinition): Run {
   };
 }
 const defaultMaze = generateMaze("square", "easy", "welcome-to-miniverse");
+type HeldInput =
+  | { kind: "direction"; direction: Direction }
+  | { kind: "keyboard"; key: string }
+  | { kind: "joystick"; vector: Point };
 export default function MazeGame() {
   const [run, setRun] = useState<Run>(() => initialRun(defaultMaze)),
     runRef = useRef(run);
   const [elapsed, setElapsed] = useState(0),
     [showHint, setShowHint] = useState(false),
     [results, setResults] = useState(false),
-    [best, setBest] = useState<number | null>(null);
+    [best, setBest] = useState<number | null>(null),
+    [motion, setMotion] = useState<MotionStep | null>(null),
+    [inputMode, setInputMode] = useState<"buttons" | "joystick">("buttons"),
+    [inputEpoch, setInputEpoch] = useState(0);
   const clock = useRef(new ActiveClock()),
-    repeat = useRef<ReturnType<typeof setInterval> | null>(null),
-    arena = useRef<HTMLDivElement>(null);
+    arena = useRef<HTMLDivElement>(null),
+    active = useRef<MotionStep | null>(null),
+    sequence = useRef(0),
+    queue = useRef<Direction[]>([]),
+    held = useRef<HeldInput | null>(null),
+    helpOpen = useRef(false),
+    pumpRef = useRef<(at: number) => void>(() => {});
   const update = useCallback((next: Run) => {
     runRef.current = next;
     setRun(next);
   }, []);
-  const cancelRepeat = useCallback(() => {
-    if (repeat.current) {
-      clearInterval(repeat.current);
-      repeat.current = null;
-    }
+  const cancelInputs = useCallback(() => {
+    held.current = null;
+    queue.current = [];
   }, []);
+  const stopPointer = useCallback(() => {
+    if (held.current?.kind === "direction") held.current = null;
+  }, []);
+  const completeRun = useCallback(() => {
+    const current = runRef.current;
+    if (current.complete) return;
+    clock.current.pause();
+    const ms = clock.current.read();
+    setElapsed(ms);
+    cancelInputs();
+    setMotion(null);
+    setInputEpoch((n) => n + 1);
+    update({ ...current, complete: true, paused: false });
+    setResults(!helpOpen.current);
+    localGameStats.save({
+      gameId: "maze",
+      shape: current.maze.shape,
+      difficulty: current.maze.difficulty,
+      milliseconds: ms,
+      moves: current.moves,
+      seed: current.maze.seed,
+      completedAt: new Date().toISOString(),
+    });
+  }, [cancelInputs, update]);
+  const beginStep = useCallback(
+    (target: string, duration: number, at: number) => {
+      const current = runRef.current,
+        cell = current.maze.cells.find((c) => c.id === current.player)!;
+      if (
+        active.current ||
+        current.complete ||
+        current.paused ||
+        document.hidden ||
+        helpOpen.current ||
+        !cell.passages.includes(target)
+      )
+        return;
+      const step: MotionStep = {
+        id: ++sequence.current,
+        mazeId: current.maze.id,
+        fromCellId: current.player,
+        toCellId: target,
+        from: cell.geometry.center,
+        to: current.maze.cells.find((c) => c.id === target)!.geometry.center,
+        startedAt: at,
+        duration,
+      };
+      active.current = step;
+      clock.current.start();
+      update({
+        ...current,
+        player: target,
+        moves: current.moves + 1,
+        trail: [...current.trail, target],
+      });
+      setMotion(step);
+    },
+    [update],
+  );
+  const pump = useCallback(
+    (at: number) => {
+      const current = runRef.current;
+      if (
+        active.current ||
+        current.complete ||
+        current.paused ||
+        document.hidden ||
+        helpOpen.current
+      )
+        return;
+      while (queue.current.length) {
+        const direction = queue.current.shift()!,
+          target = movementTarget(current.maze, current.player, direction);
+        if (target) {
+          beginStep(target, STEP_DURATION, at);
+          return;
+        }
+      }
+      const input = held.current;
+      if (!input) return;
+      if (input.kind === "joystick") {
+        const target = joystickTarget(
+          current.maze,
+          current.player,
+          input.vector,
+        );
+        if (target)
+          beginStep(
+            target,
+            joystickStepDuration(Math.hypot(input.vector.x, input.vector.y)),
+            at,
+          );
+        return;
+      }
+      const direction =
+        input.kind === "direction"
+          ? input.direction
+          : directionForKey(current.maze, current.player, input.key);
+      if (direction) {
+        const target = movementTarget(current.maze, current.player, direction);
+        if (target) beginStep(target, STEP_DURATION, at);
+      }
+    },
+    [beginStep],
+  );
+  useLayoutEffect(() => {
+    pumpRef.current = pump;
+  }, [pump]);
+  const finishStep = useCallback(
+    (id: number, at: number) => {
+      const step = active.current;
+      if (!step || step.id !== id || step.mazeId !== runRef.current.maze.id)
+        return;
+      active.current = null;
+      setMotion(null);
+      if (runRef.current.player === runRef.current.maze.exitCellId) {
+        completeRun();
+        return;
+      }
+      // Carry a normal frame's remainder into the next segment without catching up
+      // an arbitrarily long background/slow frame in a burst of movements.
+      pumpRef.current(Math.max(at, performance.now() - 32));
+    },
+    [completeRun],
+  );
+  const settleStep = useCallback(() => {
+    if (!active.current) return;
+    active.current = null;
+    setMotion(null);
+    if (runRef.current.player === runRef.current.maze.exitCellId) completeRun();
+  }, [completeRun]);
   const reset = useCallback(
     (maze: MazeDefinition) => {
-      cancelRepeat();
+      cancelInputs();
+      active.current = null;
+      setMotion(null);
+      setInputEpoch((n) => n + 1);
       clock.current.reset();
       setElapsed(0);
       setShowHint(false);
@@ -83,22 +237,26 @@ export default function MazeGame() {
       setBest(localGameStats.personalBest(maze.shape, maze.difficulty));
       update(initialRun(maze));
     },
-    [update, cancelRepeat],
+    [cancelInputs, update],
   );
   useEffect(() => {
-    // Restore browser-only preferences after the server-rendered first view.
-    /* eslint-disable react-hooks/set-state-in-effect -- Restore browser-only preferences after hydration. */
+    // Restore browser-only preferences after hydration.
+    /* eslint-disable react-hooks/set-state-in-effect -- Restore persisted browser settings. */
     try {
+      const saved = localStorage.getItem("miniverse:maze-input");
+      if (saved === "buttons" || saved === "joystick") setInputMode(saved);
       const prefs = JSON.parse(
         localStorage.getItem("miniverse:maze-preferences") ?? "null",
       );
-      if (
-        prefs &&
-        shapes.includes(prefs.shape) &&
-        difficulties.includes(prefs.difficulty)
-      )
-        reset(generateMaze(prefs.shape, prefs.difficulty, crypto.randomUUID()));
-      else reset(generateMaze("square", "easy", crypto.randomUUID()));
+      reset(
+        generateMaze(
+          prefs && shapes.includes(prefs.shape) ? prefs.shape : "square",
+          prefs && difficulties.includes(prefs.difficulty)
+            ? prefs.difficulty
+            : "easy",
+          crypto.randomUUID(),
+        ),
+      );
     } catch {
       reset(generateMaze("square", "easy", crypto.randomUUID()));
     }
@@ -106,9 +264,12 @@ export default function MazeGame() {
   }, [reset]);
   useEffect(() => {
     const visibility = () => {
-      cancelRepeat();
-      if (document.hidden) clock.current.pause();
-      else if (
+      cancelInputs();
+      setInputEpoch((n) => n + 1);
+      if (document.hidden) {
+        clock.current.pause();
+        settleStep();
+      } else if (
         runRef.current.moves > 0 &&
         !runRef.current.complete &&
         !runRef.current.paused
@@ -118,18 +279,19 @@ export default function MazeGame() {
     };
     const ticker = setInterval(() => setElapsed(clock.current.read()), 100);
     document.addEventListener("visibilitychange", visibility);
-    window.addEventListener("blur", cancelRepeat);
-    window.addEventListener("pointerup", cancelRepeat);
-    window.addEventListener("pointercancel", cancelRepeat);
+    window.addEventListener("blur", cancelInputs);
+    window.addEventListener("pointerup", stopPointer);
+    window.addEventListener("pointercancel", cancelInputs);
     return () => {
       clearInterval(ticker);
-      cancelRepeat();
+      cancelInputs();
+      active.current = null;
       document.removeEventListener("visibilitychange", visibility);
-      window.removeEventListener("blur", cancelRepeat);
-      window.removeEventListener("pointerup", cancelRepeat);
-      window.removeEventListener("pointercancel", cancelRepeat);
+      window.removeEventListener("blur", cancelInputs);
+      window.removeEventListener("pointerup", stopPointer);
+      window.removeEventListener("pointercancel", cancelInputs);
     };
-  }, [cancelRepeat]);
+  }, [cancelInputs, settleStep, stopPointer]);
   const newMaze = (
     shape = run.maze.shape,
     difficulty = run.maze.difficulty,
@@ -142,47 +304,45 @@ export default function MazeGame() {
       );
     } catch {}
   };
-  const move = useCallback(
-    (direction: Direction) => {
-      const current = runRef.current;
-      if (current.complete || current.paused || document.hidden) return;
-      const next = movementTarget(current.maze, current.player, direction);
-      if (!next) return;
-      clock.current.start();
-      const complete = next === current.maze.exitCellId;
-      const nextRun = {
-        ...current,
-        player: next,
-        moves: current.moves + 1,
-        trail: [...current.trail, next],
-        complete,
-      };
-      if (complete) {
-        clock.current.pause();
-        const ms = clock.current.read();
-        setElapsed(ms);
-        setResults(true);
-        cancelRepeat();
-        localGameStats.save({
-          gameId: "maze",
-          shape: current.maze.shape,
-          difficulty: current.maze.difficulty,
-          milliseconds: ms,
-          moves: nextRun.moves,
-          seed: current.maze.seed,
-          completedAt: new Date().toISOString(),
-        });
-      }
-      update(nextRun);
-    },
-    [update, cancelRepeat],
-  );
+  const move = useCallback((direction: Direction) => {
+    if (
+      runRef.current.complete ||
+      runRef.current.paused ||
+      document.hidden ||
+      helpOpen.current
+    )
+      return;
+    if (queue.current.length < 8) queue.current.push(direction);
+    pumpRef.current(performance.now());
+  }, []);
+  const joystick = useCallback((vector: Point | null) => {
+    if (!vector || Math.hypot(vector.x, vector.y) < JOYSTICK_DEAD_ZONE) {
+      if (held.current?.kind === "joystick") held.current = null;
+      return;
+    }
+    if (runRef.current.complete || runRef.current.paused || helpOpen.current)
+      return;
+    held.current = { kind: "joystick", vector };
+    pumpRef.current(performance.now());
+  }, []);
   const pause = () => {
-    cancelRepeat();
+    cancelInputs();
+    setInputEpoch((n) => n + 1);
+    clock.current.pause();
+    settleStep();
+    if (runRef.current.complete) return;
     const paused = !runRef.current.paused;
-    if (paused) clock.current.pause();
-    else if (runRef.current.moves > 0) clock.current.start();
     update({ ...runRef.current, paused });
+    if (!paused && runRef.current.moves > 0 && !document.hidden)
+      clock.current.start();
+  };
+  const changeInput = (mode: "buttons" | "joystick") => {
+    cancelInputs();
+    setInputEpoch((n) => n + 1);
+    setInputMode(mode);
+    try {
+      localStorage.setItem("miniverse:maze-input", mode);
+    } catch {}
   };
   const shape = run.maze.shape;
   const controls = useMemo(
@@ -194,7 +354,10 @@ export default function MazeGame() {
     <MiniGameFrame
       title="Maze Explorer"
       onHelpChange={(open) => {
-        if (open) cancelRepeat();
+        helpOpen.current = open;
+        cancelInputs();
+        setInputEpoch((n) => n + 1);
+        if (!open && runRef.current.complete) setResults(true);
       }}
       help={
         <>
@@ -218,9 +381,11 @@ export default function MazeGame() {
             does not pick a branch for you.
           </p>
           <p>
-            Hold a direction button to repeat. Restart keeps the current layout;
-            New maze changes it. The timer starts on your first move and pauses
-            in a hidden tab.
+            Hold a direction button or select Joystick and drag toward an
+            opening. Release to stop after the current cell. At a fork, steer
+            toward the branch you want; a blocked direction never selects
+            another opening. Restart keeps the current layout; New maze changes
+            it. The timer starts on your first move and pauses in a hidden tab.
           </p>
         </>
       }
@@ -316,7 +481,7 @@ export default function MazeGame() {
       }
     >
       <div
-        className="maze-area"
+        className={`maze-area input-${inputMode}`}
         ref={arena}
         tabIndex={0}
         role="group"
@@ -337,8 +502,20 @@ export default function MazeGame() {
           );
           if (d !== undefined) {
             e.preventDefault();
-            if (d) move(d);
+            if (d) {
+              if (!e.repeat) {
+                held.current = { kind: "keyboard", key: e.key.toLowerCase() };
+                move(d);
+              } else if (!active.current) pumpRef.current(performance.now());
+            }
           }
+        }}
+        onKeyUp={(e) => {
+          if (
+            held.current?.kind === "keyboard" &&
+            held.current.key === e.key.toLowerCase()
+          )
+            held.current = null;
         }}
       >
         <div
@@ -352,6 +529,8 @@ export default function MazeGame() {
               player={run.player}
               trail={run.trail}
               hint={hint}
+              motion={motion}
+              onArrival={finishStep}
             />
           </div>
           {run.paused && (
@@ -364,30 +543,65 @@ export default function MazeGame() {
           )}
         </div>
         <div className="maze-bottom">
-          <span>
-            <span className="player-legend" /> You
-          </span>
-          <span>
-            <span className="exit-legend" /> Exit
-          </span>
+          <div className="maze-legend">
+            <span>
+              <span className="player-legend" /> You
+            </span>
+            <span>
+              <span className="exit-legend" /> Exit
+            </span>
+          </div>
+          <div
+            className="maze-input-modes"
+            role="group"
+            aria-label="Movement input"
+          >
+            <button
+              type="button"
+              aria-pressed={inputMode === "buttons"}
+              onClick={() => changeInput("buttons")}
+            >
+              Buttons
+            </button>
+            <button
+              type="button"
+              aria-pressed={inputMode === "joystick"}
+              onClick={() => changeInput("joystick")}
+            >
+              Joystick
+            </button>
+          </div>
         </div>
-        <MazeControls
-          shape={shape}
-          controls={controls}
-          disabled={run.complete || run.paused}
-          onPress={(d) => {
-            arena.current?.focus();
-            cancelRepeat();
-            move(d);
-            if (!runRef.current.complete)
-              repeat.current = setInterval(() => move(d), 145);
-          }}
-          onRelease={cancelRepeat}
-          onActivate={(d) => {
-            arena.current?.focus();
-            move(d);
-          }}
-        />
+        {inputMode === "joystick" ? (
+          <MazeJoystick
+            key={`${run.maze.id}:${run.paused}:${run.complete}:${inputEpoch}`}
+            maze={run.maze}
+            player={run.player}
+            disabled={run.complete || run.paused}
+            onChange={joystick}
+            onFocus={() => {
+              cancelInputs();
+              arena.current?.focus({ preventScroll: true });
+            }}
+          />
+        ) : (
+          <MazeControls
+            shape={shape}
+            controls={controls}
+            disabled={run.complete || run.paused}
+            onPress={(d) => {
+              arena.current?.focus({ preventScroll: true });
+              cancelInputs();
+              held.current = { kind: "direction", direction: d };
+              move(d);
+            }}
+            onRelease={stopPointer}
+            onActivate={(d) => {
+              arena.current?.focus({ preventScroll: true });
+              move(d);
+            }}
+          />
+        )}
       </div>
       {run.complete && (
         <Button

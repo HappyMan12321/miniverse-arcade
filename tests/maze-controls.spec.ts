@@ -5,6 +5,7 @@ import {
   solution,
   movementTarget,
 } from "../src/games/maze/engine";
+import { STEP_DURATION } from "../src/games/maze/motion";
 import { mazeControls } from "../src/games/maze/controls";
 import type { Direction, MazeDefinition } from "../src/games/maze/types";
 const uuid = (n: number) =>
@@ -16,7 +17,12 @@ async function fixSeed(page: Page, seed: string) {
     seed,
   );
 }
-async function walk(page: Page, maze: MazeDefinition, path: string[]) {
+async function walk(
+  page: Page,
+  maze: MazeDefinition,
+  path: string[],
+  advanceClock = false,
+) {
   for (let i = 1; i < path.length; i++) {
     const control = mazeControls(maze, path[i - 1]).find(
       (c) => c.visible && c.target === path[i],
@@ -25,6 +31,7 @@ async function walk(page: Page, maze: MazeDefinition, path: string[]) {
     await page
       .locator(`.dpad button[data-direction="${control!.direction}"]`)
       .click();
+    if (advanceClock) await page.clock.runFor(STEP_DURATION + 20);
     await expect(page.locator(".maze-svg")).toHaveAttribute(
       "data-player-cell",
       path[i],
@@ -80,7 +87,7 @@ test("circle controls keep their positions and held outward movement stops at a 
   await page.getByLabel("Difficulty").selectOption("medium");
   await page.clock.pauseAt(new Date("2026-11-02T12:00:10Z"));
   const original = await positions(page);
-  await walk(page, maze, solution(maze, maze.startCellId, parent));
+  await walk(page, maze, solution(maze, maze.startCellId, parent), true);
   const count = Number(await page.getByTestId("moves").textContent()),
     out = page.getByRole("button", { name: "Move outward", exact: true });
   await out.scrollIntoViewIfNeeded();
@@ -119,21 +126,25 @@ test("circle controls keep their positions and held outward movement stops at a 
   );
   const children = radialOutwardNeighbors(maze, fork);
   await arena.press("q");
+  await page.clock.runFor(STEP_DURATION + 20);
   await expect(page.locator(".maze-svg")).toHaveAttribute(
     "data-player-cell",
     children[0].id,
   );
   await arena.press("ArrowUp");
+  await page.clock.runFor(STEP_DURATION + 20);
   await expect(page.locator(".maze-svg")).toHaveAttribute(
     "data-player-cell",
     fork,
   );
   await cw.click();
+  await page.clock.runFor(STEP_DURATION + 20);
   await expect(page.locator(".maze-svg")).toHaveAttribute(
     "data-player-cell",
     children[1].id,
   );
   await arena.press("w");
+  await page.clock.runFor(STEP_DURATION + 20);
   await expect(page.locator(".maze-svg")).toHaveAttribute(
     "data-player-cell",
     fork,
@@ -251,7 +262,9 @@ test("hexagon touch controls have true six-direction placement and matching prim
   };
   for (const c of layout) {
     expect(
-      Math.abs(((c.angle - angles[c.direction as Direction]! + 540) % 360) - 180),
+      Math.abs(
+        ((c.angle - angles[c.direction as Direction]! + 540) % 360) - 180,
+      ),
     ).toBeLessThan(0.2);
     expect(c.width).toBeGreaterThanOrEqual(44);
     expect(c.height).toBeGreaterThanOrEqual(44);
