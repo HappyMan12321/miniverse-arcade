@@ -1,0 +1,22 @@
+import { expect, it } from "vitest";
+import { ActiveClock } from "./clock";
+it("counts elapsed active time, excluding pauses, and resets", () => {
+  let now = 0;
+  const c = new ActiveClock(() => now);
+  now = 500;
+  expect(c.read()).toBe(0);
+  c.start();
+  now = 1500;
+  expect(c.read()).toBe(1000);
+  c.start();
+  now = 2000;
+  c.pause();
+  now = 10000;
+  expect(c.read()).toBe(1500);
+  c.start();
+  now = 11000;
+  c.pause();
+  expect(c.read()).toBe(2500);
+  c.reset();
+  expect(c.read()).toBe(0);
+});
