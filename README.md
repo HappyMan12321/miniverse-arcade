@@ -4,7 +4,7 @@ Small games. Big little escapes.
 
 Live site: https://miniverse-arcade.vercel.app
 
-Private source repository: https://github.com/HappyMan12321/miniverse-arcade (source upload requires approval).
+Private source repository: https://github.com/HappyMan12321/miniverse-arcade.
 
 A responsive, local-first minigame arcade built with Next.js App Router, React, TypeScript, Tailwind CSS, shadcn-style components using Radix primitives, and Lucide icons. Maze Explorer is the first playable game. No account, database, external graphics, or runtime API is required.
 
