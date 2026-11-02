@@ -111,7 +111,14 @@ export function GameCard({ game }: { game: GameMetadata }) {
         <p>{game.description}</p>
         {available ? (
           <Link href={`/games/${game.slug}`} className="card-link">
-            Let’s get lost <ArrowUpRight size={15} />
+            {game.id === "maze"
+              ? "Let’s get lost"
+              : game.id === "memory"
+                ? "Find your match"
+                : game.id === "snake"
+                  ? "Let’s grow"
+                  : "Let’s add up"}{" "}
+            <ArrowUpRight size={15} />
           </Link>
         ) : (
           <span className="coming-label">Coming soon</span>

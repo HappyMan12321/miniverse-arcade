@@ -113,9 +113,7 @@ export default function Home() {
         <div className="arcade-note">
           <span className="note-line" />
           <Asterisk size={18} />
-          <span>
-            Good things take a little time. More games are on their way.
-          </span>
+          <span>Four little escapes. Find the one that feels like you.</span>
           <span className="note-line" />
         </div>
       </section>

@@ -6,7 +6,7 @@ Live site: https://miniverse-arcade.vercel.app
 
 Private source repository: https://github.com/HappyMan12321/miniverse-arcade.
 
-A responsive, local-first minigame arcade built with Next.js App Router, React, TypeScript, Tailwind CSS, shadcn-style components using Radix primitives, and Lucide icons. Maze Explorer is the first playable game. No account, database, external graphics, or runtime API is required.
+A responsive, local-first minigame arcade built with Next.js App Router, React, TypeScript, Tailwind CSS, shadcn-style components using Radix primitives, and Lucide icons. Four complete games are available: Maze Explorer, Memory Match, Snake, and 2048. No account, database, external graphics, or runtime API is required.
 
 ## Run locally
 
@@ -17,7 +17,7 @@ npm ci
 npm run dev
 ```
 
-Open http://127.0.0.1:3000. The arcade is at `/`; Maze Explorer is at `/games/maze`.
+Open http://127.0.0.1:3000. The arcade is at `/`. Play Maze Explorer at `/games/maze`, Memory Match at `/games/memory-match`, Snake at `/games/snake`, and 2048 at `/games/2048`.
 
 ## What works
 
@@ -28,11 +28,16 @@ Open http://127.0.0.1:3000. The arcade is at `/`; Maze Explorer is at `/games/ma
 - Monotonic active-play timer: starts on the first valid movement; pauses when hidden or manually paused; stops at completion. Hidden time never counts. A visible but unfocused tab continues counting.
 - System/light/dark theme selection, saved shape/difficulty preferences, and local personal bests. Storage failures do not prevent gameplay.
 - Responsive phone/tablet/desktop layouts, reduced-motion support, focus-scoped keyboard input, semantic controls, and accessible modal focus management.
-- Central game registry with honestly labeled upcoming games. Those games have no nonfunctional Play buttons.
+- Memory Match: shuffled 6/8/12-pair decks, protected mismatch reveal, turn/time tracking, completion results, and fewest-turn records per deck size.
+- Snake: Cozy/Classic/Quick speeds, food and growth, body/wall collisions, predictable single-turn queue, pause/resume, and best scores per speed. Pauses when hidden, blurred, or opening the guide; resumes explicitly.
+- 2048: correct directional merges with one merge per tile per move, new tiles only after valid moves, score/best score, one-step undo, game-over results, and continued play after reaching 2048.
+- Every game is registered centrally and links to its own explicit route. Shared help dialogs, statistics, theme tokens, directions, storage helpers, and page layout keep the experience consistent.
 
 ## Controls
 
-Focus the maze by clicking it or tabbing to the gameplay region. Keyboard input only applies inside that region.
+Memory Match uses mouse, touch, or Tab/Enter/Space to flip cards. Snake and 2048 support arrow keys, WASD, swipe gestures on the board, and on-screen direction buttons. Start/resume focuses Snake automatically; click or tab to a board to focus keyboard input. Space pauses or resumes Snake. One queued turn is accepted between Snake movement ticks; opposite directions are rejected.
+
+Maze controls remain geometry-specific. Focus the maze by clicking it or tabbing to the gameplay region. Keyboard input only applies inside that region.
 
 | Shape | Keyboard |
 | --- | --- |
@@ -51,12 +56,16 @@ On-screen controls show their current mapping. Holding a pointer control repeats
 - `src/games/maze/rendering.ts`: SVG wall paths from the graph, separate from generation.
 - `src/games/maze/maze-renderer.tsx`: memoized SVG walls, player, trail, start, and exit.
 - `src/games/maze/maze-game.tsx`: run state, input, preferences, results, and configuration.
-- `src/games/maze/clock.ts`: independently tested monotonic active-play clock.
+- `src/games/shared/clock.ts`: independently tested monotonic active-play clock, re-exported from the existing maze clock module.
+- `src/games/memory-match`, `src/games/snake`, `src/games/2048`: pure, independently tested engines and separate React gameplay components.
+- `src/games/shared`: shared directional input, optional local best-score storage, timer, and related hooks.
+- `src/lib/random.ts`: deterministic random generator shared by the maze and memory engines.
+- `src/components/mini-game-frame.tsx` and `direction-pad.tsx`: reusable gameplay shell, statistics, help, and touch controls.
 - `src/services/game-stats.ts`: persistence interface with a local adapter; a future cloud adapter can replace it.
 - `src/components`: shared shell, theme controls, game cards, button, and Radix dialog.
 - `src/app/globals.css`: semantic theme tokens and responsive styles.
 
-Adding a game means implementing its isolated module, adding a registry entry, and creating an explicit route that imports that module. The explicit `/games/maze` route is the typed mapping for this release; there are no unrestricted slug-based imports. All game logic runs in the browser.
+Adding a game means implementing its isolated module, adding a registry entry, and creating an explicit route that imports that module. Each route explicitly imports its typed game component; there are no unrestricted slug-based imports. All game logic runs in the browser.
 
 Square mazes use 25/81/169/324 cells. Triangular mazes use 25/81/169/324, hexagonal mazes use 19/61/127/331, and circular mazes use 25/73/137/297. Difficulty primarily scales cell count. The exit is selected from boundary cells by maximum start distance; circular exits lie on the outer ring.
 
@@ -76,7 +85,7 @@ To run the same browser checks against a deployed site, set `PLAYWRIGHT_BASE_URL
 
 Local browser tests use installed Google Chrome. CI uses bundled Chromium installed with `npx playwright install --with-deps chromium`. To use bundled Chromium locally, set `CI=1` for the browser tests after installing it.
 
-The unit suite validates 320 seeded mazes across all shape/difficulty pairs, unique identifiers, reciprocal valid neighbors and passages, spanning-tree edge count, reachability, shared polygon boundaries, available movement commands, and timer accounting. Browser tests complete every geometry, check blocked movements, restart/new-maze independence, results, settings, theme persistence, and layout overflow at 375/768/1440 pixels. GitHub Actions runs the checks on pushes and pull requests.
+The unit suite validates 320 seeded mazes across all shape/difficulty pairs, unique identifiers, reciprocal valid neighbors and passages, spanning-tree edge count, reachability, shared polygon boundaries, available movement commands, and timer accounting. Browser tests complete every geometry, check blocked movements, restart/new-maze independence, results, settings, theme persistence, and layout overflow at 375/768/1440 pixels. Additional unit tests verify Memory Match deck composition/matching/locking, Snake collision/growth/reversal/tail behavior/full-board wins, and 2048 directional merging/spawning/score/win/loss logic. Browser tests complete Memory Match, exercise Snake with a controlled clock through eating and collision, play 2048 to a terminal board and undo, and verify the three new games on phone/tablet layouts, touch input, and dark mode. GitHub Actions runs all checks on pushes and pull requests.
 
 Webpack is used for builds and local development to work reliably in environments that restrict Turbopack's internal process ports.
 
@@ -90,4 +99,4 @@ npx vercel --prod
 
 ## Scope
 
-Memory Match, Snake, and 2048 are upcoming registry entries, not playable releases. Authentication, Supabase, global leaderboards, multiplayer, audio, and cloud synchronization are outside this MVP. Local records are personal browser data and are not competitive, verified scores.
+Authentication, Supabase, global leaderboards, multiplayer, audio, and cloud synchronization are outside this MVP. Local records are personal browser data and are not competitive, verified scores.
