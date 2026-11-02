@@ -132,6 +132,26 @@ const vectors: Record<Direction, [number, number]> = {
   sw: [-Math.sqrt(3) / 2, 0.5],
   se: [Math.sqrt(3) / 2, 0.5],
 };
+export function radialOutwardNeighbors(
+  maze: MazeDefinition,
+  id: string,
+): MazeCell[] {
+  const cell = maze.cells.find((c) => c.id === id);
+  if (!cell || cell.geometry.kind !== "radial") return [];
+  const ring = cell.geometry.ring;
+  return maze.cells
+    .filter(
+      (c) =>
+        cell.neighbors.includes(c.id) &&
+        c.geometry.kind === "radial" &&
+        c.geometry.ring > ring,
+    )
+    .sort((a, b) =>
+      a.geometry.kind === "radial" && b.geometry.kind === "radial"
+        ? a.geometry.sector - b.geometry.sector
+        : 0,
+    );
+}
 export function movementTarget(
   maze: MazeDefinition,
   id: string,
@@ -140,49 +160,55 @@ export function movementTarget(
   const cell = maze.cells.find((c) => c.id === id)!;
   if (cell.geometry.kind === "radial") {
     const g = cell.geometry;
-    // At a split ring, only a genuinely open outward passage is eligible.
-    const neighbors = maze.cells.filter((c) => cell.neighbors.includes(c.id));
-    let candidates: MazeCell[] = [];
-    if (direction === "up")
-      candidates = neighbors.filter(
-        (c) => c.geometry.kind === "radial" && c.geometry.ring < g.ring,
-      );
-    if (direction === "down" || direction === "sw" || direction === "se")
-      candidates = neighbors
-        .filter((c) => c.geometry.kind === "radial" && c.geometry.ring > g.ring)
-        .sort((a, b) =>
-          a.geometry.kind === "radial" && b.geometry.kind === "radial"
-            ? a.geometry.sector - b.geometry.sector
-            : 0,
+    const outward = radialOutwardNeighbors(maze, id);
+    if (direction === "down") {
+      const open = outward.filter((c) => cell.passages.includes(c.id));
+      // Never choose a branch for the player at an ambiguous outward fork.
+      return open.length === 1 ? open[0].id : null;
+    }
+    if (direction === "sw" || direction === "se") {
+      // Choose by geometry BEFORE checking walls, so a blocked branch never
+      // silently becomes the other branch when the passage state changes.
+      if (outward.length !== 2) return null;
+      const target = outward[direction === "sw" ? 0 : 1];
+      return cell.passages.includes(target.id) ? target.id : null;
+    }
+    const target = maze.cells.find((c) => {
+      if (!cell.neighbors.includes(c.id) || c.geometry.kind !== "radial")
+        return false;
+      if (direction === "up") return c.geometry.ring < g.ring;
+      if (direction === "left")
+        return (
+          c.geometry.ring === g.ring &&
+          c.geometry.sector === (g.sector - 1 + g.count) % g.count
         );
-    if (direction === "right")
-      candidates = neighbors.filter(
-        (c) =>
-          c.geometry.kind === "radial" &&
+      if (direction === "right")
+        return (
           c.geometry.ring === g.ring &&
-          c.geometry.sector === (g.sector + 1) % g.count,
-      );
-    if (direction === "left")
-      candidates = neighbors.filter(
-        (c) =>
-          c.geometry.kind === "radial" &&
-          c.geometry.ring === g.ring &&
-          c.geometry.sector === (g.sector - 1 + g.count) % g.count,
-      );
-    const open = candidates.filter((c) => cell.passages.includes(c.id));
-    return (direction === "se" ? open.at(-1) : open[0])?.id ?? null;
+          c.geometry.sector === (g.sector + 1) % g.count
+        );
+      return false;
+    });
+    return target && cell.passages.includes(target.id) ? target.id : null;
   }
-  if (maze.shape === "hexagon" && (direction === "up" || direction === "down"))
-    return null;
-  const hexVectors: Partial<Record<Direction, [number, number]>> = {
-    nw: [-0.5, -Math.sqrt(3) / 2],
-    ne: [0.5, -Math.sqrt(3) / 2],
-    sw: [-0.5, Math.sqrt(3) / 2],
-    se: [0.5, Math.sqrt(3) / 2],
-  };
-  const [vx, vy] =
-    (maze.shape === "hexagon" ? hexVectors[direction] : undefined) ??
-    vectors[direction];
+  if (maze.shape === "hexagon") {
+    if (cell.geometry.kind !== "polygon") return null;
+    const offsets: Partial<Record<Direction, [number, number]>> = {
+      left: [-1, 0],
+      right: [1, 0],
+      nw: [0, -1],
+      ne: [1, -1],
+      sw: [-1, 1],
+      se: [0, 1],
+    };
+    const offset = offsets[direction];
+    if (!offset) return null;
+    const target = `${cell.geometry.column + offset[0]},${cell.geometry.row + offset[1]}`;
+    return cell.neighbors.includes(target) && cell.passages.includes(target)
+      ? target
+      : null;
+  }
+  const [vx, vy] = vectors[direction];
   let best: string | null = null,
     bestDot = 0.7;
   for (const next of cell.neighbors) {

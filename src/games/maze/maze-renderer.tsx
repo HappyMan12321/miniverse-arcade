@@ -40,6 +40,7 @@ export const MazeRenderer = memo(function MazeRenderer({
           : `${maze.shape} maze. Orange dot is you; green diamond is the exit.`
       }
       data-seed={decorative ? undefined : maze.seed}
+      data-player-cell={decorative ? undefined : player}
     >
       <path
         d={pointPath(trail)}

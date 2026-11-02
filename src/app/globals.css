@@ -1535,3 +1535,126 @@ select {
     font-size: 10px;
   }
 }
+/* Shape-specific controllers use stable positions and geometry-aware icons. */
+.dpad-hexagon {
+  --hex-step-x: 34px;
+  --hex-step-y: 58.89px;
+  --hex-radius: 68px;
+  --hex-button-width: 52px;
+  --hex-button-height: 48px;
+  --hex-half-width: 26px;
+  --hex-half-height: 24px;
+  position: relative;
+  display: block;
+  width: 208px;
+  height: 168px;
+  flex-shrink: 0;
+}
+.dpad-hexagon .direction {
+  position: absolute;
+  width: var(--hex-button-width);
+  height: var(--hex-button-height);
+  left: calc(50% - var(--hex-half-width) + var(--hex-x));
+  top: calc(50% - var(--hex-half-height) + var(--hex-y));
+  padding: 2px;
+}
+.dpad-hexagon .dir-nw {
+  --hex-x: calc(-1 * var(--hex-step-x));
+  --hex-y: calc(-1 * var(--hex-step-y));
+}
+.dpad-hexagon .dir-ne {
+  --hex-x: var(--hex-step-x);
+  --hex-y: calc(-1 * var(--hex-step-y));
+}
+.dpad-hexagon .dir-left {
+  --hex-x: calc(-1 * var(--hex-radius));
+  --hex-y: 0px;
+}
+.dpad-hexagon .dir-right {
+  --hex-x: var(--hex-radius);
+  --hex-y: 0px;
+}
+.dpad-hexagon .dir-sw {
+  --hex-x: calc(-1 * var(--hex-step-x));
+  --hex-y: var(--hex-step-y);
+}
+.dpad-hexagon .dir-se {
+  --hex-x: var(--hex-step-x);
+  --hex-y: var(--hex-step-y);
+}
+.dpad-hexagon kbd {
+  display: block;
+  font-size: 10px;
+}
+.controller-core {
+  display: grid;
+  place-items: center;
+  position: absolute;
+  left: calc(50% - 10px);
+  top: calc(50% - 10px);
+  width: 20px;
+  height: 20px;
+  color: var(--muted);
+  opacity: 0.55;
+  pointer-events: none;
+}
+.dpad-circle {
+  position: relative;
+  grid-template-columns: repeat(3, 78px);
+  grid-template-rows: repeat(3, 54px);
+  gap: 6px;
+}
+.dpad-circle .dir-up {
+  grid-column: 2;
+  grid-row: 1;
+}
+.dpad-circle .dir-left {
+  grid-column: 1;
+  grid-row: 2;
+}
+.dpad-circle .dir-right {
+  grid-column: 3;
+  grid-row: 2;
+}
+.dpad-circle .dir-sw {
+  grid-column: 1;
+  grid-row: 3;
+}
+.dpad-circle .dir-down {
+  grid-column: 2;
+  grid-row: 3;
+}
+.dpad-circle .dir-se {
+  grid-column: 3;
+  grid-row: 3;
+}
+.dpad-circle .radial-label {
+  font-size: 10px;
+  font-weight: 600;
+}
+.dpad-circle .direction {
+  padding: 2px;
+}
+.control-hidden {
+  visibility: hidden;
+  pointer-events: none;
+}
+@media (max-width: 700px) {
+  .dpad-hexagon {
+    --hex-step-x: 28px;
+    --hex-step-y: 48.5px;
+    --hex-radius: 56px;
+    --hex-button-width: 48px;
+    --hex-button-height: 44px;
+    --hex-half-width: 24px;
+    --hex-half-height: 22px;
+    width: 180px;
+    height: 148px;
+  }
+  .dpad-circle {
+    grid-template-rows: repeat(3, 48px);
+  }
+  .dpad-circle kbd {
+    display: none;
+  }
+}

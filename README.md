@@ -47,8 +47,8 @@ Maze controls remain geometry-specific. Focus the maze by clicking it or tabbing
 | --- | --- |
 | Square | Arrow keys or W/A/S/D |
 | Triangle | W/A/D in downward-facing cells; Q/E/S in upward-facing cells. Left/right arrows follow the current diagonal directions. |
-| Hexagon | Q/W upper diagonals, A/D horizontal, Z/X lower diagonals |
-| Circle | Up/inward, down/outward, left/counterclockwise, right/clockwise. W/A/S/D also work. When two outward passages exist, Z/X select outward left/right. |
+| Hexagon | Q/E upper diagonals, A/D horizontal, Z/C lower diagonals (W/X remain aliases; left/right arrows also work) |
+| Circle | Up/inward, down/outward, left/counterclockwise, right/clockwise. W/A/S/D also work. When two outward passages exist, choose Out CCW with Q/Z or Out CW with E/X; the general Out action stops at ambiguous forks. |
 
 On-screen controls show their current mapping. Holding a pointer control repeats movement until release, cancellation, pointer leave, or window blur. Blocked moves do not count.
 
@@ -104,3 +104,7 @@ npx vercel --prod
 ## Scope
 
 Authentication, Supabase, global leaderboards, multiplayer, audio, and cloud synchronization are outside this MVP. Local records are personal browser data and are not competitive, verified scores.
+
+### Geometry-aware maze controllers
+
+Hexagonal controls are positioned at the six actual neighbor angles, and button labels and keyboard mappings share one definition. Circular controls use inward/outward and clockwise/counterclockwise icons rather than screen-space arrows. The circular pad keeps a fixed layout; outward branch controls refer to fixed geometric halves before checking walls, so a blocked branch never falls back to the other side. Holding Out stops at a fork with two open outward branches. All generated passages are checked for reachability through a visible control and its keyboard mapping.

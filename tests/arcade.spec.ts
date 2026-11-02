@@ -94,27 +94,20 @@ for (const shape of ["square", "triangle", "hexagon", "circle"] as MazeShape[])
         (d) => movementTarget(maze, current, d) === next,
       )!;
       if (shape === "circle") {
-        const label =
-          direction === "up"
-            ? "inward"
-            : direction === "left"
-              ? "counterclockwise"
-              : direction === "right"
-                ? "clockwise"
-                : "outward";
-        // At a split, choose the explicitly labeled branch rather than the default outward action.
-        const exact = page.getByRole("button", {
-          name: `Move ${label}`,
-          exact: true,
-        });
-        if (await exact.count()) await exact.click();
-        else
-          await page
-            .getByRole("button", {
-              name: `Move outward ${movementTarget(maze, current, "sw") === next ? "left" : "right"}`,
-              exact: true,
-            })
-            .click();
+        const labels: Partial<Record<Direction, string>> = {
+          up: "inward",
+          down: "outward",
+          left: "counterclockwise",
+          right: "clockwise",
+          sw: "outward counterclockwise branch",
+          se: "outward clockwise branch",
+        };
+        await page
+          .getByRole("button", {
+            name: `Move ${labels[direction]}`,
+            exact: true,
+          })
+          .click();
       } else {
         let key = keys[direction];
         if (shape === "triangle") {

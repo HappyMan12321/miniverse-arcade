@@ -1,15 +1,8 @@
 "use client";
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  ArrowDown,
-  ArrowDownLeft,
-  ArrowDownRight,
-  ArrowLeft,
   ArrowRight,
-  ArrowUp,
-  ArrowUpLeft,
-  ArrowUpRight,
   Circle,
   Hexagon,
   Lightbulb,
@@ -32,32 +25,14 @@ import { ActiveClock, formatTime } from "./clock";
 import { generateMaze, movementTarget, solution } from "./engine";
 import { difficulties, shapes } from "./topology";
 import { MazeRenderer } from "./maze-renderer";
+import { MazeControls } from "./maze-controls";
+import { mazeControls, directionForKey } from "./controls";
 import type { Difficulty, Direction, MazeDefinition } from "./types";
 const icons = {
   square: Square,
   triangle: Triangle,
   hexagon: Hexagon,
   circle: Circle,
-};
-const arrows = {
-  up: ArrowUp,
-  down: ArrowDown,
-  left: ArrowLeft,
-  right: ArrowRight,
-  nw: ArrowUpLeft,
-  ne: ArrowUpRight,
-  sw: ArrowDownLeft,
-  se: ArrowDownRight,
-};
-const names: Record<Direction, string> = {
-  up: "Up",
-  down: "Down",
-  left: "Left",
-  right: "Right",
-  nw: "Upper left",
-  ne: "Upper right",
-  sw: "Lower left",
-  se: "Lower right",
 };
 interface Run {
   maze: MazeDefinition;
@@ -209,84 +184,11 @@ export default function MazeGame() {
     else if (runRef.current.moves > 0) clock.current.start();
     update({ ...runRef.current, paused });
   };
-  const shape = run.maze.shape,
-    g = run.maze.cells.find((c) => c.id === run.player)!.geometry;
-  let directions: Direction[] = ["up", "left", "down", "right"];
-  let keyLabels: Partial<Record<Direction, string>> = {
-    up: "W / ↑",
-    left: "A / ←",
-    down: "S / ↓",
-    right: "D / →",
-  };
-  if (shape === "hexagon") {
-    directions = ["nw", "ne", "left", "right", "sw", "se"];
-    keyLabels = { nw: "Q", ne: "W", left: "A", right: "D", sw: "Z", se: "X" };
-  }
-  if (shape === "triangle") {
-    const down = g.kind === "polygon" && run.player.endsWith("d");
-    directions = down ? ["up", "sw", "se"] : ["nw", "ne", "down"];
-    keyLabels = down
-      ? { up: "W / ↑", sw: "A / ←", se: "D / →" }
-      : { nw: "Q / ←", ne: "E / →", down: "S / ↓" };
-  }
-  if (
-    shape === "circle" &&
-    movementTarget(run.maze, run.player, "sw") &&
-    movementTarget(run.maze, run.player, "se") !==
-      movementTarget(run.maze, run.player, "sw")
-  ) {
-    directions = ["up", "left", "right", "sw", "se"];
-    keyLabels = { ...keyLabels, sw: "Z", se: "X" };
-  }
-  const keyDirection = (key: string): Direction | undefined => {
-    key = key.toLowerCase();
-    if (shape === "circle" && key === "z") return "sw";
-    if (shape === "circle" && key === "x") return "se";
-    if (shape === "hexagon")
-      return (
-        { q: "nw", w: "ne", a: "left", d: "right", z: "sw", x: "se" } as Record<
-          string,
-          Direction
-        >
-      )[key];
-    if (shape === "triangle") {
-      if (directions.includes("up"))
-        return (
-          {
-            w: "up",
-            arrowup: "up",
-            a: "sw",
-            arrowleft: "sw",
-            d: "se",
-            arrowright: "se",
-          } as Record<string, Direction>
-        )[key];
-      return (
-        {
-          q: "nw",
-          a: "nw",
-          arrowleft: "nw",
-          e: "ne",
-          d: "ne",
-          arrowright: "ne",
-          s: "down",
-          arrowdown: "down",
-        } as Record<string, Direction>
-      )[key];
-    }
-    return (
-      {
-        w: "up",
-        arrowup: "up",
-        a: "left",
-        arrowleft: "left",
-        s: "down",
-        arrowdown: "down",
-        d: "right",
-        arrowright: "right",
-      } as Record<string, Direction>
-    )[key];
-  };
+  const shape = run.maze.shape;
+  const controls = useMemo(
+    () => mazeControls(run.maze, run.player),
+    [run.maze, run.player],
+  );
   const hint = showHint ? solution(run.maze, run.player).slice(0, 4) : [];
   return (
     <MiniGameFrame
@@ -306,13 +208,14 @@ export default function MazeGame() {
             the diagonals.
           </p>
           <p>
-            <strong>Hexagon:</strong> Q/W upper diagonals, A/D left/right, Z/X
-            lower diagonals.
+            <strong>Hexagon:</strong> Q/E upper diagonals, A/D left/right, Z/C
+            lower diagonals. Left/right arrow keys also work.
           </p>
           <p>
-            <strong>Circle:</strong> Up inward, down outward, left
-            counterclockwise, right clockwise. Z/X choose between two outward
-            branches.
+            <strong>Circle:</strong> In/Out move between rings; CCW/CW rotate
+            around a ring. Arrow keys or WASD control these four actions. At two
+            open outward branches, select Out CCW (Q/Z) or Out CW (E/X); Out
+            does not pick a branch for you.
           </p>
           <p>
             Hold a direction button to repeat. Restart keeps the current layout;
@@ -427,10 +330,14 @@ export default function MazeGame() {
             e.altKey
           )
             return;
-          const d = keyDirection(e.key);
-          if (d) {
+          const d = directionForKey(
+            runRef.current.maze,
+            runRef.current.player,
+            e.key,
+          );
+          if (d !== undefined) {
             e.preventDefault();
-            move(d);
+            if (d) move(d);
           }
         }}
       >
@@ -464,70 +371,23 @@ export default function MazeGame() {
             <span className="exit-legend" /> Exit
           </span>
         </div>
-        <div className="movement-section">
-          <div
-            className={`dpad dpad-${shape} ${shape === "circle" && directions.includes("sw") ? "radial-split" : ""}`}
-          >
-            {directions.map((d) => {
-              const Icon = arrows[d],
-                target = movementTarget(run.maze, run.player, d);
-              const label =
-                shape === "circle"
-                  ? (
-                      {
-                        up: "Inward",
-                        down: "Outward",
-                        left: "Counterclockwise",
-                        right: "Clockwise",
-                        sw: "Outward left",
-                        se: "Outward right",
-                      } as Record<string, string>
-                    )[d]
-                  : names[d];
-              return (
-                <button
-                  key={d}
-                  className={`direction dir-${d}`}
-                  aria-label={`Move ${label.toLowerCase()}`}
-                  aria-disabled={!target || run.complete || run.paused}
-                  onPointerDown={(e) => {
-                    if (e.button !== 0) return;
-                    e.preventDefault();
-                    arena.current?.focus();
-                    cancelRepeat();
-                    move(d);
-                    repeat.current = setInterval(() => move(d), 145);
-                  }}
-                  onPointerUp={cancelRepeat}
-                  onPointerCancel={cancelRepeat}
-                  onPointerLeave={cancelRepeat}
-                  onClick={(e) => {
-                    if (e.detail === 0) move(d);
-                  }}
-                >
-                  <Icon size={21} />
-                  <kbd>{keyLabels[d]}</kbd>
-                  {shape === "circle" && (
-                    <span className="radial-label">
-                      {
-                        (
-                          {
-                            up: "In",
-                            down: "Out",
-                            left: "CCW",
-                            right: "CW",
-                            sw: "Out L",
-                            se: "Out R",
-                          } as Record<string, string>
-                        )[d]
-                      }
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </div>
+        <MazeControls
+          shape={shape}
+          controls={controls}
+          disabled={run.complete || run.paused}
+          onPress={(d) => {
+            arena.current?.focus();
+            cancelRepeat();
+            move(d);
+            if (!runRef.current.complete)
+              repeat.current = setInterval(() => move(d), 145);
+          }}
+          onRelease={cancelRepeat}
+          onActivate={(d) => {
+            arena.current?.focus();
+            move(d);
+          }}
+        />
       </div>
       {run.complete && (
         <Button
