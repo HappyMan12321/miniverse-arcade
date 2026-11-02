@@ -10,7 +10,7 @@ A responsive, local-first minigame arcade built with Next.js App Router, React, 
 
 ## Run locally
 
-Requires Node.js 22 or 24 and npm.
+Requires Node.js 24 and npm.
 
 ```sh
 npm ci
