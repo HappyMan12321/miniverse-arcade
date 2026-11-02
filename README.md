@@ -2,6 +2,10 @@
 
 Small games. Big little escapes.
 
+Live site: https://miniverse-arcade.vercel.app
+
+Private source repository: https://github.com/HappyMan12321/miniverse-arcade (source upload requires approval).
+
 A responsive, local-first minigame arcade built with Next.js App Router, React, TypeScript, Tailwind CSS, shadcn-style components using Radix primitives, and Lucide icons. Maze Explorer is the first playable game. No account, database, external graphics, or runtime API is required.
 
 ## Run locally
@@ -67,6 +71,8 @@ npm test
 npm run build
 npm run test:e2e
 ```
+
+To run the same browser checks against a deployed site, set `PLAYWRIGHT_BASE_URL=https://your-site.vercel.app` before `npm run test:e2e`; this skips the local server.
 
 Local browser tests use installed Google Chrome. CI uses bundled Chromium installed with `npx playwright install --with-deps chromium`. To use bundled Chromium locally, set `CI=1` for the browser tests after installing it.
 
