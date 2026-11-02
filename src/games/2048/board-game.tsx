@@ -88,9 +88,6 @@ export default function BoardGame() {
   return (
     <MiniGameFrame
       title="2048"
-      number="04"
-      kicker="SMALL MOVES. SATISFYING POSSIBILITIES."
-      description="Slide a little. Combine a little. See how far the numbers can take you."
       onHelpChange={setHelpOpen}
       help={
         <>
@@ -113,12 +110,6 @@ export default function BoardGame() {
       }
       toolbar={
         <>
-          <div className="mini-option">
-            <span className="eyebrow">THE ORIGINAL CHALLENGE</span>
-            <span className="mini-setting-value">
-              4 × 4 · A world of possibility
-            </span>
-          </div>
           <div className="mini-toolbar-actions">
             <Button variant="outline" onClick={undo} disabled={!run.previous}>
               <Undo2 size={16} /> Undo
@@ -131,37 +122,17 @@ export default function BoardGame() {
       }
       stats={
         <>
+          <GameStat label="Score" value={run.game.score} testId="2048-score" />
           <GameStat
-            label="A little added up"
-            value={run.game.score}
-            testId="2048-score"
-          />
-          <GameStat
-            label="Highest tile"
+            label="Max tile"
             value={Math.max(...run.game.board)}
             testId="2048-highest"
           />
-          <GameStat label="Moves made" value={run.moves} testId="2048-moves" />
+          <GameStat label="Moves" value={run.moves} testId="2048-moves" />
           <BestStat value={best} />
         </>
       }
-      note={{
-        title: "Make a little space.",
-        body: "Keep your biggest tile in a corner, build around it, and leave room for the next possibility.",
-      }}
     >
-      <div className="mini-board-top">
-        <span className="eyebrow">
-          <Sparkles size={13} /> LITTLE BY LITTLE
-        </span>
-        <span className="mini-status" aria-live="polite">
-          {over
-            ? "No more moves. A good little run."
-            : run.game.won
-              ? "2048, and a little beyond."
-              : "Matching numbers belong together."}
-        </span>
-      </div>
       <div
         ref={arena}
         tabIndex={0}
@@ -201,27 +172,20 @@ export default function BoardGame() {
         }}
         disabled={over || win}
       />
-      <p className="mini-board-caption">
-        Click the board to focus your keys. Every little merge counts.
-      </p>
       {over && dismissed && (
         <Button
           variant="outline"
           className="center-button"
           onClick={() => setDismissed(false)}
         >
-          View your result
+          Results
         </Button>
       )}
       <Dialog
         open={dialog}
         onOpenChange={closeResult}
-        title={win ? "A big little achievement." : "That all added up nicely."}
-        description={
-          win
-            ? "2048 is yours. There’s always room for a little more."
-            : "No more moves, but plenty more possibilities next time."
-        }
+        title={win ? "You win" : "Game over"}
+        description={win ? "2048 reached." : "No moves remaining."}
       >
         <div className="result-icon">
           <Sparkles size={40} />

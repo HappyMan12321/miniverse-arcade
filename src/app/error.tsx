@@ -8,9 +8,8 @@ export default function ErrorPage({
 }) {
   return (
     <main id="main" className="container empty-page">
-      <span className="eyebrow orange-text">A LITTLE DETOUR</span>
-      <h1>Let’s find our way back.</h1>
-      <p>Something interrupted this adventure. Give it another try.</p>
+      <h1>Unable to load game</h1>
+      <p>Please try again.</p>
       <Button onClick={reset}>Try again</Button>
     </main>
   );

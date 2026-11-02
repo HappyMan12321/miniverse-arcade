@@ -20,18 +20,18 @@ test("lobby links, theme persistence, help, restart, new maze and all difficulty
 }) => {
   await page.goto("/");
   await expect(
-    page.getByRole("heading", { name: /Small games/ }),
+    page.getByRole("heading", { name: "Arcade", exact: true }),
   ).toBeVisible();
   await expect(page.locator(".game-card")).toHaveCount(4);
   await page.getByRole("button", { name: /Theme:/ }).click();
   const theme = await page.locator("html").getAttribute("data-theme");
   await page.reload();
   await expect(page.locator("html")).toHaveAttribute("data-theme", theme!);
-  await page.getByRole("link", { name: "Find your way" }).click();
+  await page.getByRole("link", { name: "Play Maze Explorer" }).click();
   await expect(page).toHaveURL(/games\/maze/);
   await page.getByRole("button", { name: "How to play" }).click();
   await expect(page.getByRole("dialog")).toBeVisible();
-  await page.getByRole("button", { name: "Let’s explore" }).click();
+  await page.getByRole("button", { name: "Done" }).click();
   const svg = page.locator('[data-testid="maze-canvas"] svg');
   const first = await svg.getAttribute("data-seed");
   await page.getByRole("button", { name: "Restart current maze" }).click();
@@ -39,17 +39,17 @@ test("lobby links, theme persistence, help, restart, new maze and all difficulty
   await page.getByRole("button", { name: "New maze", exact: true }).click();
   await expect(svg).not.toHaveAttribute("data-seed", first!);
   for (const level of ["medium", "hard", "expert", "easy"]) {
-    await page.getByLabel("YOUR CHALLENGE").selectOption(level);
-    await expect(page.locator(".maze-level")).toContainText(level);
+    await page.getByLabel("Difficulty").selectOption(level);
+    await expect(page.getByLabel("Difficulty")).toHaveValue(level);
     await expect(page.getByTestId("moves")).toHaveText("00");
   }
-  await page.getByRole("button", { name: "Need a little nudge?" }).click();
+  await page.getByRole("button", { name: "Hint", exact: true }).click();
   await expect(page.locator(".maze-hint")).toHaveCount(1);
   await page.getByRole("button", { name: "Pause game", exact: true }).click();
   await expect(
-    page.getByRole("heading", { name: "A little breather." }),
+    page.getByRole("heading", { name: "Paused", exact: true }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Keep exploring" }).click();
+  await page.getByRole("button", { name: "Resume", exact: true }).click();
   await expect(page.getByTestId("timer")).toHaveText("00:00");
 });
 for (const shape of ["square", "triangle", "hexagon", "circle"] as MazeShape[])
@@ -134,7 +134,7 @@ for (const shape of ["square", "triangle", "hexagon", "circle"] as MazeShape[])
     }
     await expect(page.getByRole("dialog")).toBeVisible();
     await expect(
-      page.getByRole("heading", { name: "Look at you. You found your way." }),
+      page.getByRole("heading", { name: "Maze completed" }),
     ).toBeVisible();
     await page.getByRole("button", { name: "Close dialog" }).click();
     await page.getByRole("button", { name: "Restart current maze" }).click();
@@ -149,7 +149,7 @@ test("responsive layouts at phone, tablet and desktop widths", async ({
     await page.setViewportSize({ width, height: 900 });
     await page.goto("/");
     await expect(
-      page.getByRole("heading", { name: /Small games/ }),
+      page.getByRole("heading", { name: "Arcade", exact: true }),
     ).toBeVisible();
     expect(
       await page.evaluate(() =>

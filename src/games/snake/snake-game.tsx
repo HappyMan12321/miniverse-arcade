@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Pause, Play, RefreshCw, Apple, Trophy } from "lucide-react";
+import { Pause, Play, RefreshCw, Trophy } from "lucide-react";
 import {
   MiniGameFrame,
   GameStat,
@@ -78,9 +78,6 @@ export default function SnakeGame() {
   return (
     <MiniGameFrame
       title="Snake"
-      number="03"
-      kicker="A FAMILIAR FAVORITE. A FRESH LITTLE FOCUS."
-      description="Follow your appetite. Find your rhythm. Leave a little room to grow."
       onHelpChange={(open) => {
         if (open) pause();
       }}
@@ -98,14 +95,14 @@ export default function SnakeGame() {
           <p>
             Space pauses or resumes when the board is focused. Switching tabs or
             leaving the window pauses your run; resume when you’re ready. Choose
-            Cozy, Classic, or Quick for your preferred pace.
+            Slow, Normal, or Fast for your preferred pace.
           </p>
         </>
       }
       toolbar={
         <>
           <div className="mini-option">
-            <label htmlFor="snake-speed">FIND YOUR PACE</label>
+            <label htmlFor="snake-speed">Speed</label>
             <select
               id="snake-speed"
               value={speed}
@@ -114,28 +111,17 @@ export default function SnakeGame() {
                 reset();
               }}
             >
-              <option value="cozy">Cozy</option>
-              <option value="classic">Classic</option>
-              <option value="quick">Quick</option>
+              <option value="cozy">Slow</option>
+              <option value="classic">Normal</option>
+              <option value="quick">Fast</option>
             </select>
           </div>
           <div className="mini-toolbar-actions">
-            <Button
-              variant="outline"
-              onClick={() => (state.status === "running" ? pause() : start())}
-              disabled={ended}
-            >
-              {state.status === "running" ? (
-                <Pause size={16} />
-              ) : (
-                <Play size={16} />
-              )}{" "}
-              {state.status === "running"
-                ? "Pause"
-                : state.status === "paused"
-                  ? "Resume"
-                  : "Start"}
-            </Button>
+            {state.status === "running" && (
+              <Button variant="outline" onClick={pause}>
+                <Pause size={16} /> Pause
+              </Button>
+            )}
             <Button onClick={reset}>
               <RefreshCw size={16} /> New game
             </Button>
@@ -144,42 +130,16 @@ export default function SnakeGame() {
       }
       stats={
         <>
+          <GameStat label="Score" value={state.score} testId="snake-score" />
           <GameStat
-            label="Points collected"
-            value={state.score}
-            testId="snake-score"
-          />
-          <GameStat
-            label="A little longer"
-            value={`${state.body.length} segments`}
+            label="Length"
+            value={state.body.length}
             testId="snake-length"
-          />
-          <GameStat
-            label="Your pace"
-            value={speed.charAt(0).toUpperCase() + speed.slice(1)}
           />
           <BestStat value={best} />
         </>
       }
-      note={{
-        title: "One turn at a time.",
-        body: "Give yourself a little space. The best route is the one that leaves somewhere to go next.",
-      }}
     >
-      <div className="mini-board-top">
-        <span className="eyebrow">
-          <Apple size={13} /> A LITTLE ROOM TO GROW
-        </span>
-        <span className="mini-status" aria-live="polite">
-          {state.status === "running"
-            ? "Find your flow."
-            : state.status === "paused"
-              ? "Paused. Take your time."
-              : ended
-                ? "A good little run."
-                : "Your next little obsession."}
-        </span>
-      </div>
       <div
         ref={arena}
         tabIndex={0}
@@ -261,17 +221,14 @@ export default function SnakeGame() {
         </svg>
         {state.status !== "running" && (
           <div className={`snake-overlay ${ended ? "is-ended" : ""}`}>
-            <span className="eyebrow">
-              {ended ? "A LITTLE WELL PLAYED" : "AT YOUR OWN PACE"}
-            </span>
             <h2>
               {state.status === "ready"
-                ? "Ready to grow?"
+                ? "Snake"
                 : state.status === "paused"
-                  ? "A little breather."
+                  ? "Paused"
                   : state.status === "won"
-                    ? "A full little universe."
-                    : "One more little go?"}
+                    ? "You win"
+                    : "Game over"}
             </h2>
             {ended ? (
               <>
@@ -286,7 +243,7 @@ export default function SnakeGame() {
             ) : (
               <Button onClick={start}>
                 <Play size={16} />
-                {state.status === "paused" ? "Keep growing" : "Let’s play"}
+                {state.status === "paused" ? "Resume" : "Play"}
               </Button>
             )}
           </div>
@@ -299,9 +256,6 @@ export default function SnakeGame() {
         }}
         disabled={state.status !== "running"}
       />
-      <p className="mini-board-caption">
-        Click the board to focus your keys. Space for a breather.
-      </p>
     </MiniGameFrame>
   );
 }

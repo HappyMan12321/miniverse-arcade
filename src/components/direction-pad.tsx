@@ -32,9 +32,6 @@ export function DirectionPad({
           );
         })}
       </div>
-      <p className="control-caption">
-        Arrow keys, WASD, a swipe, or a little tap.
-      </p>
     </div>
   );
 }

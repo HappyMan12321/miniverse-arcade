@@ -11,9 +11,7 @@ async function tiles(page: Page) {
 }
 test("all four games are playable from the arcade", async ({ page }) => {
   await page.goto("/");
-  await expect(page.locator(".card-status")).toHaveText(
-    Array(4).fill("Ready to play"),
-  );
+  await expect(page.getByRole("link", { name: /^Play / })).toHaveCount(4);
   for (const [slug, title] of [
     ["memory-match", "Memory Match"],
     ["snake", "Snake"],
@@ -21,7 +19,7 @@ test("all four games are playable from the arcade", async ({ page }) => {
   ]) {
     await page.locator(`.card-link[href="/games/${slug}"]`).click();
     await expect(
-      page.getByRole("heading", { name: `${title}.`, exact: true }),
+      page.getByRole("heading", { name: title, exact: true, level: 1 }),
     ).toBeVisible();
     await page.getByRole("link", { name: "Back to the arcade" }).click();
   }
@@ -53,14 +51,12 @@ test("Memory Match locks mismatches, completes a deck, and resets every challeng
   await expect(page.getByTestId("memory-pairs")).toHaveText("8 / 8");
   await expect(page.getByTestId("memory-turns")).toHaveText("9");
   await expect(page.getByRole("dialog")).toBeVisible();
-  await expect(
-    page.getByRole("heading", { name: "A perfect little reunion." }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Completed" })).toBeVisible();
   await page.getByRole("button", { name: "Play again" }).click();
   await expect(page.getByTestId("memory-turns")).toHaveText("0");
   await expect(board).not.toHaveAttribute("data-seed", seed);
   for (const pairs of [6, 12, 8]) {
-    await page.getByLabel("YOUR CHALLENGE").selectOption(String(pairs));
+    await page.getByLabel("Deck size").selectOption(String(pairs));
     await expect(cards).toHaveCount(pairs * 2);
     await expect(page.getByTestId("memory-pairs")).toHaveText(`0 / ${pairs}`);
   }
@@ -77,27 +73,25 @@ test("Snake starts, pauses, resumes, eats fruit, ends on a wall, and restarts", 
   await page.goto("/games/snake");
   await page.clock.pauseAt(new Date("2026-11-01T12:00:10Z"));
   const board = page.getByRole("group", { name: "Snake gameplay" });
-  await page.getByRole("button", { name: "Let’s play", exact: true }).click();
+  await page.getByRole("button", { name: "Play", exact: true }).click();
   await expect(board).toHaveAttribute("data-status", "running");
   await board.press("ArrowLeft");
   await page.clock.runFor(145 * 3 + 5);
   await expect(page.getByTestId("snake-score")).toHaveText("10");
-  await expect(page.getByTestId("snake-length")).toHaveText("4 segments");
+  await expect(page.getByTestId("snake-length")).toHaveText("4");
   await page.getByRole("button", { name: "Pause", exact: true }).click();
   await page.clock.runFor(2000);
   await expect(board).toHaveAttribute("data-status", "paused");
   await expect(page.getByTestId("snake-score")).toHaveText("10");
-  await page.getByRole("button", { name: "Keep growing" }).click();
+  await board.getByRole("button", { name: "Resume", exact: true }).click();
   await page.clock.runFor(145 * 5);
   await expect(board).toHaveAttribute("data-status", "over");
-  await expect(
-    page.getByRole("heading", { name: "One more little go?" }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Game over" })).toBeVisible();
   await page.getByRole("button", { name: "Play again" }).click();
   await expect(board).toHaveAttribute("data-status", "ready");
   await expect(page.getByTestId("snake-score")).toHaveText("0");
-  await page.getByLabel("FIND YOUR PACE").selectOption("cozy");
-  await page.getByRole("button", { name: "Let’s play", exact: true }).click();
+  await page.getByLabel("Speed").selectOption("cozy");
+  await page.getByRole("button", { name: "Play", exact: true }).click();
   await board.press("ArrowUp");
   await page.clock.runFor(210);
   await board.press("ArrowLeft");
@@ -160,9 +154,7 @@ test("2048 obeys slide rules, counts valid moves, undoes, and reaches game over"
     );
   }
   await expect(page.getByRole("dialog")).toBeVisible();
-  await expect(
-    page.getByRole("heading", { name: "That all added up nicely." }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Game over" })).toBeVisible();
   await page
     .getByRole("button", { name: "Undo last move", exact: true })
     .click();

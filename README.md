@@ -19,6 +19,10 @@ npm run dev
 
 Open http://127.0.0.1:3000. The arcade is at `/`. Play Maze Explorer at `/games/maze`, Memory Match at `/games/memory-match`, Snake at `/games/snake`, and 2048 at `/games/2048`.
 
+## Interface
+
+The arcade opens directly to four game cards. Each game uses a compact title bar, score HUD, settings/actions, a centered board, and touch controls. Rules are available through the help button. Promotional sections, message sidebars, captions, and footer clutter have been removed. Phone layouts keep stats above the board and use touch targets of at least 44 pixels, responsive boards, and safe-area padding. Short and landscape screens can scroll vertically.
+
 ## What works
 
 - Four genuine topologies: square grid, triangular tessellation with a triangular boundary, axial hexagons with a hexagonal boundary, and polar rings with varying sector counts.

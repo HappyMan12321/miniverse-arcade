@@ -101,9 +101,6 @@ export default function MemoryGame() {
   return (
     <MiniGameFrame
       title="Memory Match"
-      number="02"
-      kicker="A LITTLE FOCUS GOES A LONG WAY"
-      description="Turn a card. Find its other half. Give your memory a little moment."
       onHelpChange={setHelpOpen}
       help={
         <>
@@ -125,15 +122,15 @@ export default function MemoryGame() {
       toolbar={
         <>
           <div className="mini-option">
-            <label htmlFor="memory-size">YOUR CHALLENGE</label>
+            <label htmlFor="memory-size">Deck size</label>
             <select
               id="memory-size"
               value={pairs}
               onChange={(e) => reset(Number(e.target.value))}
             >
-              <option value={6}>A little warm-up · 6 pairs</option>
-              <option value={8}>Find your flow · 8 pairs</option>
-              <option value={12}>Stretch your memory · 12 pairs</option>
+              <option value={6}>6 pairs</option>
+              <option value={8}>8 pairs</option>
+              <option value={12}>12 pairs</option>
             </select>
           </div>
           <Button onClick={() => reset(pairs)}>
@@ -144,42 +141,25 @@ export default function MemoryGame() {
       stats={
         <>
           <GameStat
-            label="Pairs reunited"
+            label="Pairs"
             value={`${state.matched.length / 2} / ${pairs}`}
             testId="memory-pairs"
           />
+          <GameStat label="Turns" value={state.turns} testId="memory-turns" />
           <GameStat
-            label="Turns taken"
-            value={state.turns}
-            testId="memory-turns"
-          />
-          <GameStat
-            label="Time exploring"
+            label="Time"
             value={formatTime(complete ? finishedTime : timer.elapsed)}
             testId="memory-timer"
           />
-          <BestStat label="Fewest turns" value={best} />
+          <BestStat label="Best turns" value={best} />
         </>
       }
-      note={{
-        title: "A familiar little feeling.",
-        body: "Every card is a clue. Take your time, remember the little details, and let the pairs find each other.",
-      }}
     >
-      <div className="mini-board-top">
-        <span className="eyebrow">{pairs} PAIRS. ONE LITTLE CHALLENGE.</span>
-        <span className="mini-status" aria-live="polite">
-          {complete
-            ? "All together. Nicely done."
-            : state.flipped.length === 2
-              ? "A little moment to remember…"
-              : "Find the matching symbols"}
-        </span>
-      </div>
       <div
         className={`memory-board memory-pairs-${pairs}`}
         role="group"
         aria-label="Memory cards"
+        aria-busy={state.flipped.length === 2}
         data-seed={seed}
       >
         {state.deck.map((card, index) => {
@@ -206,23 +186,20 @@ export default function MemoryGame() {
           );
         })}
       </div>
-      <p className="mini-board-caption">
-        A click, a little curiosity, and a pair worth remembering.
-      </p>
       {complete && (
         <Button
           variant="outline"
           className="center-button"
           onClick={() => setResults(true)}
         >
-          View your result
+          Results
         </Button>
       )}
       <Dialog
         open={results}
         onOpenChange={setResults}
-        title="A perfect little reunion."
-        description={`All ${pairs} pairs found. Your memory deserves a moment.`}
+        title="Completed"
+        description={`${pairs} pairs matched.`}
       >
         <div className="result-icon">
           <Flower2 size={40} />

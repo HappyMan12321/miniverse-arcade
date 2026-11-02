@@ -3,7 +3,7 @@ import MazeGame from "@/games/maze/maze-game";
 export const metadata: Metadata = {
   title: "Maze Explorer",
   description:
-    "Find your way through four procedurally generated maze geometries. A little lost, in a good way.",
+    "Play square, triangular, hexagonal, and circular mazes across four difficulty levels.",
 };
 export default function MazePage() {
   return <MazeGame />;

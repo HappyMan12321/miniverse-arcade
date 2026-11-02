@@ -1,13 +1,5 @@
 import Link from "next/link";
-import {
-  ArrowUpRight,
-  LockKeyhole,
-  Sparkles,
-  Star,
-  Heart,
-  Flower2,
-  Moon,
-} from "lucide-react";
+import { Play, Star, Heart, Flower2, Moon } from "lucide-react";
 import type { GameMetadata } from "@/games/registry";
 import { MazeRenderer } from "@/games/maze/maze-renderer";
 import { generateMaze, solution } from "@/games/maze/engine";
@@ -80,50 +72,40 @@ export function GameArt({ kind }: { kind: GameMetadata["illustration"] }) {
   );
 }
 export function GameCard({ game }: { game: GameMetadata }) {
-  const available = game.status === "available";
-  return (
-    <article
-      className={`game-card ${game.color} ${available ? "available" : ""}`}
-    >
+  const content = (
+    <>
       <div className="game-art">
-        <span className="card-status">
-          {available ? (
-            <>
-              <span className="online-dot" /> Ready to play
-            </>
-          ) : (
-            <>
-              <LockKeyhole size={11} /> In the making
-            </>
-          )}
-        </span>
         <GameArt kind={game.illustration} />
-        <span className="art-number">
-          0{["maze", "memory", "snake", "2048"].indexOf(game.id) + 1}
-        </span>
       </div>
       <div className="card-info">
-        <span className="eyebrow">{game.category}</span>
-        <h3>
-          {game.title}
-          {available ? <ArrowUpRight size={20} /> : <Sparkles size={17} />}
-        </h3>
-        <p>{game.description}</p>
-        {available ? (
-          <Link href={`/games/${game.slug}`} className="card-link">
-            {game.id === "maze"
-              ? "Let’s get lost"
-              : game.id === "memory"
-                ? "Find your match"
-                : game.id === "snake"
-                  ? "Let’s grow"
-                  : "Let’s add up"}{" "}
-            <ArrowUpRight size={15} />
-          </Link>
-        ) : (
-          <span className="coming-label">Coming soon</span>
-        )}
+        <span className="card-category">{game.category}</span>
+        <h2>{game.title}</h2>
+        <span className="card-play">
+          {game.status === "available" ? (
+            <>
+              <Play size={15} fill="currentColor" />
+              Play
+            </>
+          ) : (
+            "Coming soon"
+          )}
+        </span>
       </div>
+    </>
+  );
+  return (
+    <article className={`game-card ${game.color}`}>
+      {game.status === "available" ? (
+        <Link
+          href={`/games/${game.slug}`}
+          className="card-link"
+          aria-label={`Play ${game.title}`}
+        >
+          {content}
+        </Link>
+      ) : (
+        content
+      )}
     </article>
   );
 }

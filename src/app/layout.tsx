@@ -1,14 +1,14 @@
 import type { Metadata } from "next";
 import { ThemeProvider } from "@/components/theme-provider";
-import { Navbar, Footer } from "@/components/shell";
+import { Navbar } from "@/components/shell";
 import "./globals.css";
 export const metadata: Metadata = {
   title: {
-    default: "MiniVerse — Small games. Big little escapes.",
+    default: "MiniVerse Arcade",
     template: "%s · MiniVerse",
   },
   description:
-    "A thoughtfully made collection of browser games. Step into Maze Explorer, find your flow, and make a little room for play.",
+    "Play Maze Explorer, Memory Match, Snake, and 2048. Free browser games with keyboard and touch controls.",
 };
 export default function RootLayout({
   children,
@@ -24,7 +24,6 @@ export default function RootLayout({
           </a>
           <Navbar />
           {children}
-          <Footer />
         </ThemeProvider>
       </body>
     </html>

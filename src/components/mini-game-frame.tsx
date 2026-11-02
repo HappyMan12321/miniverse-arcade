@@ -1,29 +1,21 @@
 "use client";
 import Link from "next/link";
 import { useState } from "react";
-import { ChevronLeft, CircleHelp, Trophy, Asterisk } from "lucide-react";
+import { ArrowLeft, CircleHelp, Trophy } from "lucide-react";
 import { Button } from "./ui/button";
 import { Dialog } from "./ui/dialog";
 export function MiniGameFrame({
   title,
-  number,
-  kicker,
-  description,
   help,
   toolbar,
   stats,
-  note,
   children,
   onHelpChange,
 }: {
   title: string;
-  number: string;
-  kicker: string;
-  description: string;
   help: React.ReactNode;
   toolbar: React.ReactNode;
   stats: React.ReactNode;
-  note: { title: string; body: string };
   children: React.ReactNode;
   onHelpChange?: (open: boolean) => void;
 }) {
@@ -34,59 +26,40 @@ export function MiniGameFrame({
   };
   return (
     <main id="main" className="game-page container">
-      <div className="game-breadcrumb">
-        <Link href="/#games">
-          <ChevronLeft size={15} /> Back to the arcade
+      <header className="game-heading">
+        <Link
+          href="/#games"
+          className="back-button"
+          aria-label="Back to the arcade"
+        >
+          <ArrowLeft size={20} />
         </Link>
-        <span>{number} / A LITTLE ESCAPE</span>
-      </div>
-      <div className="game-heading">
-        <div>
-          <div className="eyebrow orange-text">{kicker}</div>
-          <h1>
-            {title}
-            <span className="orange-text">.</span>
-          </h1>
-          <p>{description}</p>
-        </div>
-        <Button variant="outline" size="small" onClick={() => change(true)}>
-          <CircleHelp size={16} /> How to play
+        <h1>{title}</h1>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => change(true)}
+          aria-label="How to play"
+          title="How to play"
+        >
+          <CircleHelp size={21} />
         </Button>
-      </div>
+      </header>
       <div className="game-workspace">
+        <section className="game-hud" aria-label="Game stats">
+          {stats}
+        </section>
         <div className="mini-toolbar">{toolbar}</div>
-        <div className="play-layout">
-          <div className="mini-play-area">{children}</div>
-          <aside className="game-sidebar">
-            <div className="run-card">
-              <span className="eyebrow">YOUR LITTLE JOURNEY</span>
-              {stats}
-            </div>
-            <div className="explorer-note">
-              <span className="note-icon">
-                <Asterisk size={23} />
-              </span>
-              <h3>{note.title}</h3>
-              <p>{note.body}</p>
-            </div>
-            <p className="timer-policy">
-              Made for a little focus, at your own pace. Your personal best
-              stays in this browser.
-            </p>
-          </aside>
-        </div>
-      </div>
-      <div className="below-game">
-        <span>✳</span> A small game. A well-earned break.
+        <div className="mini-play-area">{children}</div>
       </div>
       <Dialog
         open={showHelp}
         onOpenChange={change}
-        title={`A little guide to ${title}.`}
-        description="A few simple rules. Plenty of room to play."
+        title="How to play"
+        description={title}
       >
         <div className="help-content">{help}</div>
-        <Button onClick={() => change(false)}>Got it. Let’s play.</Button>
+        <Button onClick={() => change(false)}>Done</Button>
       </Dialog>
     </main>
   );
@@ -108,18 +81,19 @@ export function GameStat({
   );
 }
 export function BestStat({
-  label,
+  label = "Best",
   value,
 }: {
   label?: string;
   value: string | number | null;
 }) {
   return (
-    <div className="personal-best">
-      <Trophy size={15} />
+    <div className="stat best-stat">
       <span>
-        {label ?? "Personal best"} · {value ?? "Your first adventure awaits"}
+        <Trophy size={12} />
+        {label}
       </span>
+      <strong>{value ?? "—"}</strong>
     </div>
   );
 }

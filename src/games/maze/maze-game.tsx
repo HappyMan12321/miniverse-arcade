@@ -10,12 +10,7 @@ import {
   ArrowUp,
   ArrowUpLeft,
   ArrowUpRight,
-  Check,
-  ChevronLeft,
   Circle,
-  CircleHelp,
-  Flag,
-  Footprints,
   Hexagon,
   Lightbulb,
   Pause,
@@ -23,10 +18,13 @@ import {
   RefreshCw,
   RotateCcw,
   Square,
-  Timer,
   Triangle,
-  Trophy,
 } from "lucide-react";
+import {
+  MiniGameFrame,
+  GameStat,
+  BestStat,
+} from "@/components/mini-game-frame";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { localGameStats } from "@/services/game-stats";
@@ -85,7 +83,6 @@ export default function MazeGame() {
     runRef = useRef(run);
   const [elapsed, setElapsed] = useState(0),
     [showHint, setShowHint] = useState(false),
-    [help, setHelp] = useState(false),
     [results, setResults] = useState(false),
     [best, setBest] = useState<number | null>(null);
   const clock = useRef(new ActiveClock()),
@@ -292,31 +289,53 @@ export default function MazeGame() {
   };
   const hint = showHint ? solution(run.maze, run.player).slice(0, 4) : [];
   return (
-    <main id="main" className="game-page container">
-      <div className="game-breadcrumb">
-        <Link href="/#games">
-          <ChevronLeft size={15} /> Back to the arcade
-        </Link>
-        <span>01 / THE ORIGINAL</span>
-      </div>
-      <div className="game-heading">
-        <div>
-          <div className="eyebrow orange-text">TAKE THE SCENIC ROUTE</div>
-          <h1>
-            Maze Explorer<span className="orange-text">.</span>
-          </h1>
+    <MiniGameFrame
+      title="Maze Explorer"
+      onHelpChange={(open) => {
+        if (open) cancelRepeat();
+      }}
+      help={
+        <>
+          <p>Move the orange dot to the green diamond through open passages.</p>
           <p>
-            Every maze is a new beginning. Find your way to the green diamond.
+            <strong>Square:</strong> Arrow keys or WASD.
           </p>
-        </div>
-        <Button variant="outline" size="small" onClick={() => setHelp(true)}>
-          <CircleHelp size={16} /> How to play
-        </Button>
-      </div>
-      <div className="game-workspace">
-        <div className="settings-bar">
+          <p>
+            <strong>Triangle:</strong> Use the three displayed directions. W/A/D
+            for downward cells, Q/E/S for upward cells. Left/right arrows follow
+            the diagonals.
+          </p>
+          <p>
+            <strong>Hexagon:</strong> Q/W upper diagonals, A/D left/right, Z/X
+            lower diagonals.
+          </p>
+          <p>
+            <strong>Circle:</strong> Up inward, down outward, left
+            counterclockwise, right clockwise. Z/X choose between two outward
+            branches.
+          </p>
+          <p>
+            Hold a direction button to repeat. Restart keeps the current layout;
+            New maze changes it. The timer starts on your first move and pauses
+            in a hidden tab.
+          </p>
+        </>
+      }
+      stats={
+        <>
+          <GameStat label="Time" value={formatTime(elapsed)} testId="timer" />
+          <GameStat
+            label="Moves"
+            value={String(run.moves).padStart(2, "0")}
+            testId="moves"
+          />
+          <BestStat value={best === null ? null : formatTime(best)} />
+        </>
+      }
+      toolbar={
+        <>
           <fieldset className="shape-fieldset">
-            <legend>MAKE IT YOURS</legend>
+            <legend className="sr-only">Maze shape</legend>
             <div className="shape-buttons">
               {shapes.map((s) => {
                 const Icon = icons[s];
@@ -328,298 +347,203 @@ export default function MazeGame() {
                     className={shape === s ? "selected" : ""}
                   >
                     <Icon size={17} />
-                    <span>
-                      {s === "circle"
-                        ? "Circle"
-                        : s.charAt(0).toUpperCase() + s.slice(1)}
-                    </span>
+                    <span>{s[0].toUpperCase() + s.slice(1)}</span>
                   </button>
                 );
               })}
             </div>
           </fieldset>
-          <div className="difficulty-field">
-            <label htmlFor="difficulty">YOUR CHALLENGE</label>
-            <select
-              id="difficulty"
-              value={run.maze.difficulty}
-              onChange={(e) => newMaze(shape, e.target.value as Difficulty)}
-            >
-              {difficulties.map((d) => (
-                <option key={d} value={d}>
-                  {d.charAt(0).toUpperCase() + d.slice(1)}
-                </option>
-              ))}
-            </select>
-          </div>
-          <Button onClick={() => newMaze()} className="new-maze-button">
-            <RefreshCw size={16} /> New maze
-          </Button>
-        </div>
-        <div className="play-layout">
-          <div
-            className="maze-area"
-            ref={arena}
-            tabIndex={0}
-            role="group"
-            aria-label="Maze gameplay. Focus here to use the keyboard controls."
-            onKeyDown={(e) => {
-              if (
-                e.target instanceof HTMLSelectElement ||
-                e.target instanceof HTMLInputElement ||
-                e.ctrlKey ||
-                e.metaKey ||
-                e.altKey
-              )
-                return;
-              const d = keyDirection(e.key);
-              if (d) {
-                e.preventDefault();
-                move(d);
-              }
-            }}
-          >
-            <div className="maze-toolbar">
-              <span className="maze-level">
-                <span className="online-dot" />
-                {run.maze.difficulty} exploration
-              </span>
-              <div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  aria-label="Restart current maze"
-                  title="Restart current maze"
-                  onClick={() => reset(run.maze)}
-                >
-                  <RotateCcw size={17} />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  aria-label={run.paused ? "Resume game" : "Pause game"}
-                  disabled={run.complete}
-                  onClick={pause}
-                >
-                  {run.paused ? <Play size={17} /> : <Pause size={17} />}
-                </Button>
-              </div>
-            </div>
-            <div
-              className="maze-canvas"
-              data-testid="maze-canvas"
-              onClick={() => arena.current?.focus()}
-            >
-              <div
-                className={run.paused ? "maze-inner is-paused" : "maze-inner"}
+          <div className="maze-action-row">
+            <div className="difficulty-field">
+              <label className="sr-only" htmlFor="difficulty">
+                Difficulty
+              </label>
+              <select
+                id="difficulty"
+                value={run.maze.difficulty}
+                onChange={(e) => newMaze(shape, e.target.value as Difficulty)}
               >
-                <MazeRenderer
-                  maze={run.maze}
-                  player={run.player}
-                  trail={run.trail}
-                  hint={hint}
-                />
-              </div>
-              {run.paused && (
-                <div className="pause-overlay">
-                  <span className="eyebrow">TAKE YOUR TIME</span>
-                  <h2>A little breather.</h2>
-                  <Button onClick={pause}>
-                    <Play size={16} /> Keep exploring
-                  </Button>
-                </div>
-              )}
-            </div>
-            <div className="maze-bottom">
-              <span>
-                <span className="player-legend" /> You
-              </span>
-              <span>
-                <span className="exit-legend" /> The way out
-              </span>
-              <span className="seed-label">
-                {run.maze.cells.length} little possibilities
-              </span>
-            </div>
-            <div className="movement-section">
-              <div
-                className={`dpad dpad-${shape} ${shape === "circle" && directions.includes("sw") ? "radial-split" : ""}`}
-              >
-                {directions.map((d) => {
-                  const Icon = arrows[d],
-                    target = movementTarget(run.maze, run.player, d);
-                  const label =
-                    shape === "circle"
-                      ? (
-                          {
-                            up: "Inward",
-                            down: "Outward",
-                            left: "Counterclockwise",
-                            right: "Clockwise",
-                            sw: "Outward left",
-                            se: "Outward right",
-                          } as Record<string, string>
-                        )[d]
-                      : names[d];
-                  return (
-                    <button
-                      key={d}
-                      className={`direction dir-${d}`}
-                      aria-label={`Move ${label.toLowerCase()}`}
-                      aria-disabled={!target || run.complete || run.paused}
-                      onPointerDown={(e) => {
-                        if (e.button !== 0) return;
-                        e.preventDefault();
-                        arena.current?.focus();
-                        cancelRepeat();
-                        move(d);
-                        repeat.current = setInterval(() => move(d), 145);
-                      }}
-                      onPointerUp={cancelRepeat}
-                      onPointerCancel={cancelRepeat}
-                      onPointerLeave={cancelRepeat}
-                      onClick={(e) => {
-                        if (e.detail === 0) move(d);
-                      }}
-                    >
-                      <Icon size={20} />
-                      <kbd>{keyLabels[d]}</kbd>
-                      {shape === "circle" && (
-                        <span className="radial-label">{label}</span>
-                      )}
-                    </button>
-                  );
-                })}
-                <span className="dpad-center">✳</span>
-              </div>
-              <p className="control-caption">
-                {shape === "hexagon"
-                  ? "Six directions. One way through."
-                  : shape === "triangle"
-                    ? "Your directions follow the triangle you’re in."
-                    : shape === "circle"
-                      ? "In, out, and around. Follow the open passages."
-                      : "Use your arrow keys or the controls above."}
-              </p>
-            </div>
-          </div>
-          <aside className="game-sidebar">
-            <div className="run-card">
-              <span className="eyebrow">YOUR LITTLE JOURNEY</span>
-              <div className="stat">
-                <span>
-                  <Timer size={17} /> Time exploring
-                </span>
-                <strong data-testid="timer">{formatTime(elapsed)}</strong>
-              </div>
-              <div className="stat">
-                <span>
-                  <Footprints size={17} /> Steps taken
-                </span>
-                <strong data-testid="moves">
-                  {run.moves.toString().padStart(2, "0")}
-                </strong>
-              </div>
-              <div className="personal-best">
-                <Trophy size={15} />
-                <span>
-                  {best === null
-                    ? "Your first adventure awaits"
-                    : `Personal best · ${formatTime(best)}`}
-                </span>
-              </div>
-            </div>
-            <div className="explorer-note">
-              <span className="note-icon">
-                <Flag size={22} />
-              </span>
-              <h3>There’s no wrong turn.</h3>
-              <p>
-                Just a different way of getting there. Explore, backtrack, and
-                enjoy the journey.
-              </p>
-              <div className="note-divider" />
-              <span>
-                <Check size={14} /> One maze. One unique path.
-              </span>
+                {difficulties.map((d) => (
+                  <option key={d} value={d}>
+                    {d[0].toUpperCase() + d.slice(1)}
+                  </option>
+                ))}
+              </select>
             </div>
             <Button
+              onClick={() => newMaze()}
+              className="new-maze-button"
+              aria-label="New maze"
+            >
+              <RefreshCw size={16} />
+              <span>New maze</span>
+            </Button>
+            <Button
               variant="outline"
-              className="hint-button"
+              size="icon"
+              aria-label="Restart current maze"
+              title="Restart"
+              onClick={() => reset(run.maze)}
+            >
+              <RotateCcw size={18} />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              aria-label={run.paused ? "Resume game" : "Pause game"}
+              title={run.paused ? "Resume" : "Pause"}
+              disabled={run.complete}
+              onClick={pause}
+            >
+              {run.paused ? <Play size={18} /> : <Pause size={18} />}
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              aria-label={showHint ? "Hide hint" : "Hint"}
+              title={showHint ? "Hide hint" : "Hint"}
               aria-pressed={showHint}
               onClick={() => setShowHint((v) => !v)}
               disabled={run.complete}
             >
-              <Lightbulb size={16} />
-              {showHint ? "Hide the little nudge" : "Need a little nudge?"}
+              <Lightbulb size={18} />
             </Button>
-            <p className="timer-policy">
-              Your timer starts with your first step and pauses when this tab is
-              hidden.
-            </p>
-            {run.complete && (
-              <Button variant="outline" onClick={() => setResults(true)}>
-                <Trophy size={16} /> View your result
-              </Button>
-            )}
-          </aside>
-        </div>
-      </div>
-      <div className="below-game">
-        <span>✳</span> Finding your way is half the fun.
-      </div>
-      <Dialog
-        open={help}
-        onOpenChange={setHelp}
-        title="A little guide to getting lost."
-        description="Move the orange dot to the green diamond. You can only travel through open passages."
+          </div>
+        </>
+      }
+    >
+      <div
+        className="maze-area"
+        ref={arena}
+        tabIndex={0}
+        role="group"
+        aria-label="Maze gameplay. Focus here to use the keyboard controls."
+        onKeyDown={(e) => {
+          if (
+            e.target instanceof HTMLSelectElement ||
+            e.target instanceof HTMLInputElement ||
+            e.ctrlKey ||
+            e.metaKey ||
+            e.altKey
+          )
+            return;
+          const d = keyDirection(e.key);
+          if (d) {
+            e.preventDefault();
+            move(d);
+          }
+        }}
       >
-        <div className="help-content">
-          <p>
-            <strong>Square:</strong> Arrow keys or W, A, S, D.
-          </p>
-          <p>
-            <strong>Triangle:</strong> Follow the three arrows beneath your
-            maze. W/A/D move through a downward triangle; Q/E/S through an
-            upward triangle. Left and right arrows follow the diagonals.
-          </p>
-          <p>
-            <strong>Hexagon:</strong> Q/W for upper diagonals, A/D for
-            left/right, Z/X for lower diagonals.
-          </p>
-          <p>
-            <strong>Circle:</strong> ↑ inward, ↓ outward, ← counterclockwise, →
-            clockwise. At a ring split with two open passages, use the two
-            outward arrows (Z/X) to choose your branch.
-          </p>
-          <p>
-            Click the maze to focus keyboard controls. Hold an on-screen arrow
-            to keep moving. Restart keeps your maze; New maze creates a new
-            adventure.
-          </p>
-          <p>
-            The timer measures active play and pauses in hidden tabs. Shape and
-            difficulty changes start a new run.
-          </p>
-        </div>
-        <Button
-          onClick={() => {
-            setHelp(false);
-            arena.current?.focus();
-          }}
+        <div
+          className="maze-canvas"
+          data-testid="maze-canvas"
+          onClick={() => arena.current?.focus()}
         >
-          Let’s explore <ArrowUpRight size={16} />
+          <div className={run.paused ? "maze-inner is-paused" : "maze-inner"}>
+            <MazeRenderer
+              maze={run.maze}
+              player={run.player}
+              trail={run.trail}
+              hint={hint}
+            />
+          </div>
+          {run.paused && (
+            <div className="pause-overlay">
+              <h2>Paused</h2>
+              <Button onClick={pause}>
+                <Play size={17} /> Resume
+              </Button>
+            </div>
+          )}
+        </div>
+        <div className="maze-bottom">
+          <span>
+            <span className="player-legend" /> You
+          </span>
+          <span>
+            <span className="exit-legend" /> Exit
+          </span>
+        </div>
+        <div className="movement-section">
+          <div
+            className={`dpad dpad-${shape} ${shape === "circle" && directions.includes("sw") ? "radial-split" : ""}`}
+          >
+            {directions.map((d) => {
+              const Icon = arrows[d],
+                target = movementTarget(run.maze, run.player, d);
+              const label =
+                shape === "circle"
+                  ? (
+                      {
+                        up: "Inward",
+                        down: "Outward",
+                        left: "Counterclockwise",
+                        right: "Clockwise",
+                        sw: "Outward left",
+                        se: "Outward right",
+                      } as Record<string, string>
+                    )[d]
+                  : names[d];
+              return (
+                <button
+                  key={d}
+                  className={`direction dir-${d}`}
+                  aria-label={`Move ${label.toLowerCase()}`}
+                  aria-disabled={!target || run.complete || run.paused}
+                  onPointerDown={(e) => {
+                    if (e.button !== 0) return;
+                    e.preventDefault();
+                    arena.current?.focus();
+                    cancelRepeat();
+                    move(d);
+                    repeat.current = setInterval(() => move(d), 145);
+                  }}
+                  onPointerUp={cancelRepeat}
+                  onPointerCancel={cancelRepeat}
+                  onPointerLeave={cancelRepeat}
+                  onClick={(e) => {
+                    if (e.detail === 0) move(d);
+                  }}
+                >
+                  <Icon size={21} />
+                  <kbd>{keyLabels[d]}</kbd>
+                  {shape === "circle" && (
+                    <span className="radial-label">
+                      {
+                        (
+                          {
+                            up: "In",
+                            down: "Out",
+                            left: "CCW",
+                            right: "CW",
+                            sw: "Out L",
+                            se: "Out R",
+                          } as Record<string, string>
+                        )[d]
+                      }
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+      {run.complete && (
+        <Button
+          variant="outline"
+          className="center-button"
+          onClick={() => setResults(true)}
+        >
+          Results
         </Button>
-      </Dialog>
+      )}
       <Dialog
         open={results}
         onOpenChange={setResults}
-        title="Look at you. You found your way."
-        description={`One little maze, conquered. ${shape.charAt(0).toUpperCase() + shape.slice(1)} · ${run.maze.difficulty}`}
+        title="Maze completed"
+        description={`${shape[0].toUpperCase() + shape.slice(1)} · ${run.maze.difficulty}`}
       >
-        <div className="result-icon">
-          <Trophy size={38} />
-        </div>
         <div className="result-stats">
           <div>
             <span>TIME</span>
@@ -631,17 +555,17 @@ export default function MazeGame() {
           </div>
         </div>
         {best !== null && elapsed < best && (
-          <p className="new-best">A new personal best. Nicely explored!</p>
+          <p className="new-best">New best time</p>
         )}
         <div className="result-actions">
           <Button onClick={() => newMaze()}>
             <RefreshCw size={16} /> Play again
           </Button>
           <Link href="/#games" className="button button-outline">
-            Back to games <ArrowRight size={16} />
+            Arcade <ArrowRight size={16} />
           </Link>
         </div>
       </Dialog>
-    </main>
+    </MiniGameFrame>
   );
 }
